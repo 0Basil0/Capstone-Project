@@ -18,4 +18,4 @@ Core Features
 5.	7-Day Meal Planner: Automatically generates weekly meal plans based on user allergies.
 6.	Dashboard: Visual summary of safe foods, unsafe items, and AI suggestions.
 ________________________________________
-![NutriGuard ERD:](".\files\NutriGuard_ERD.png")
+![NutriGuard ERD:](files\NutriGuard_ERD.png)
