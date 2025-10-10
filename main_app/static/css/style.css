@@ -1,0 +1,115 @@
+/* ========== GLOBAL STYLES ========== */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f7f9f7;
+    color: #333;
+    min-height: 100vh;
+}
+
+/* Links & Buttons */
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ========== NAVBAR ========== */
+.navbar {
+    background: linear-gradient(90deg, #198754, #2e9f67);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+}
+
+.nav-link {
+    color: #f1f1f1 !important;
+    font-weight: 500;
+    margin-left: 10px;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #d4edda !important;
+    transform: scale(1.05);
+}
+
+/* ========== CONTAINERS & CARDS ========== */
+.container {
+    max-width: 1000px;
+}
+
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #198754;
+    color: white;
+    font-weight: 600;
+    border-top-left-radius: 15px !important;
+    border-top-right-radius: 15px !important;
+}
+
+/* ========== BUTTONS ========== */
+.btn-success {
+    background-color: #198754;
+    border: none;
+    border-radius: 8px;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-success:hover {
+    background-color: #157347;
+    transform: translateY(-2px);
+}
+
+.btn-outline-success {
+    border-color: #198754;
+    color: #198754;
+}
+
+.btn-outline-success:hover {
+    background-color: #198754;
+    color: white;
+}
+
+/* ========== FORMS ========== */
+form {
+    background-color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+form input, form select, form textarea {
+    border-radius: 10px !important;
+    border: 1px solid #ccc;
+}
+
+form input:focus, form select:focus, form textarea:focus {
+    border-color: #198754;
+    box-shadow: 0 0 3px rgba(25, 135, 84, 0.3);
+}
+
+/* ========== FOOTER ========== */
+footer {
+    background: linear-gradient(90deg, #198754, #2e9f67);
+    color: white;
+    font-size: 0.9rem;
+}
+
+/* ========== UTILITIES ========== */
+.text-success-light {
+    color: #2e9f67 !important;
+}
+
+.rounded-15 {
+    border-radius: 15px;
+}
