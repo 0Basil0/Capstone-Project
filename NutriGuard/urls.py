@@ -16,9 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from main_app import views as main_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # override the default logout to ensure our custom view handles it
+    path('accounts/logout/', main_views.custom_logout, name='logout'),
     path('', include('main_app.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
 ]

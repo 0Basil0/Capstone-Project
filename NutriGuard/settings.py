@@ -125,7 +125,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Authentication settings
-LOGIN_REDIRECT_URL = '/'
+# After login, send users to post-login handler which decides whether to show survey
+LOGIN_REDIRECT_URL = '/post_login/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Allow logout via GET request (less secure but more convenient)
