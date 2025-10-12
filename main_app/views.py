@@ -5,10 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import logout
 from .forms import CustomUserCreationForm
-from .models import ChatHistory, Allergy
+from .models import ChatHistory, Allergy, MealPlan, Food
 from django.db.models import Max
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
@@ -190,6 +191,130 @@ class AllergyListView(LoginRequiredMixin, ListView):
     context_object_name = 'allergies'
     def get_queryset(self):
         return Allergy.objects.filter(user=self.request.user)
+
+
+@login_required
+def home(request):
+    # Show today's meal placeholders and existing mealplans for user
+    import datetime, os
+    day = datetime.date.today().isoformat()
+    plan = MealPlan.objects.filter(user=request.user, day=day).first()
+
+    initial_plan = None
+    if plan:
+        user_slug = request.user.username
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        images_base = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
+
+        def image_url_if_exists(fname):
+            full = os.path.join(images_base, fname)
+            if os.path.exists(full):
+                return f"/static/images/generated/{user_slug}/{fname}"
+            return None
+
+        initial_plan = {
+            'breakfast': {'name': plan.breakfast.name if plan.breakfast else '', 'image': image_url_if_exists(f"{day}_breakfast.png")},
+            'lunch': {'name': plan.lunch.name if plan.lunch else '', 'image': image_url_if_exists(f"{day}_lunch.png")},
+            'dinner': {'name': plan.dinner.name if plan.dinner else '', 'image': image_url_if_exists(f"{day}_dinner.png")},
+            'generation_count': getattr(plan, 'generation_count', 0),
+        }
+
+    import json
+    initial_plan_json = json.dumps(initial_plan) if initial_plan else None
+    return render(request, 'home.html', {'initial_plan': initial_plan, 'initial_plan_json': initial_plan_json})
+
+
+@login_required
+@require_POST
+def generate_and_save_meals(request):
+    # Generate daily meals via AI and save them as Food + MealPlan for today
+    from .utils import generate_daily_meals
+    import datetime
+
+    allergy_names = list(Allergy.objects.filter(user=request.user).values_list('name', flat=True))
+    import datetime
+    day = datetime.date.today().isoformat()
+    data = generate_daily_meals(allergy_names=allergy_names)
+    if not data:
+        return JsonResponse({'error': 'Could not generate meals'}, status=502)
+
+    # Helper to upsert Food
+    def get_or_create_food(obj):
+        name = obj.get('name')[:100]
+        ingredients = obj.get('ingredients','')
+        description = obj.get('description','')
+        food, _ = Food.objects.get_or_create(name=name, defaults={'ingredients': ingredients, 'description': description})
+        # update if missing
+        changed = False
+        if not food.ingredients and ingredients:
+            food.ingredients = ingredients
+            changed = True
+        if not food.description and description:
+            food.description = description
+            changed = True
+        if changed:
+            food.save()
+        return food
+
+    breakfast = get_or_create_food(data.get('breakfast', {})) if data.get('breakfast') else None
+    lunch = get_or_create_food(data.get('lunch', {})) if data.get('lunch') else None
+    dinner = get_or_create_food(data.get('dinner', {})) if data.get('dinner') else None
+
+    # Generate background images for each meal and save into static/images/generated/<user>/<day>_
+    from .utils import generate_image
+    user_slug = request.user.username
+    day = datetime.date.today().isoformat()
+    images = {}
+    try:
+        if breakfast:
+            prompt = f"{breakfast.name}: {breakfast.ingredients}. {breakfast.description}"
+            img_rel = f"images/generated/{user_slug}/{day}_breakfast.png"
+            images['breakfast_img'] = generate_image(prompt, output_path=img_rel)
+        else:
+            images['breakfast_img'] = None
+        if lunch:
+            prompt = f"{lunch.name}: {lunch.ingredients}. {lunch.description}"
+            img_rel = f"images/generated/{user_slug}/{day}_lunch.png"
+            images['lunch_img'] = generate_image(prompt, output_path=img_rel)
+        else:
+            images['lunch_img'] = None
+        if dinner:
+            prompt = f"{dinner.name}: {dinner.ingredients}. {dinner.description}"
+            img_rel = f"images/generated/{user_slug}/{day}_dinner.png"
+            images['dinner_img'] = generate_image(prompt, output_path=img_rel)
+        else:
+            images['dinner_img'] = None
+    except Exception:
+        images = {'breakfast_img': None, 'lunch_img': None, 'dinner_img': None}
+
+    day = datetime.date.today().isoformat()
+    plan, created = MealPlan.objects.update_or_create(user=request.user, day=day, defaults={'breakfast': breakfast, 'lunch': lunch, 'dinner': dinner})
+
+    # Return JSON with saved plan info
+    return JsonResponse({
+        'day': day,
+        'breakfast': {
+            'id': breakfast.id if breakfast else None,
+            'name': breakfast.name if breakfast else '',
+            'image': images.get('breakfast_img'),
+            'ingredients': breakfast.ingredients if breakfast else '',
+            'description': breakfast.description if breakfast else '',
+        },
+        'lunch': {
+            'id': lunch.id if lunch else None,
+            'name': lunch.name if lunch else '',
+            'image': images.get('lunch_img'),
+            'ingredients': lunch.ingredients if lunch else '',
+            'description': lunch.description if lunch else '',
+        },
+        'dinner': {
+            'id': dinner.id if dinner else None,
+            'name': dinner.name if dinner else '',
+            'image': images.get('dinner_img'),
+            'ingredients': dinner.ingredients if dinner else '',
+            'description': dinner.description if dinner else '',
+        },
+    })
         
 
 
@@ -244,7 +369,31 @@ def add_allergy(request):
                             first.description = desc
                             first.save()
     return redirect('allergies')
+from django.views.decorators.http import require_POST
+
+
+@login_required
+@require_POST
 def delete_allergy(request, pk):
-    allergy = Allergy.objects.get(pk=pk)
+    # Only allow owner to delete
+    allergy = get_object_or_404(Allergy, pk=pk, user=request.user)
     allergy.delete()
     return redirect('allergies')
+
+
+@login_required
+def edit_allergy(request, pk):
+    # Only allow owner to edit
+    allergy = get_object_or_404(Allergy, pk=pk, user=request.user)
+    if request.method == "POST":
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        if name:
+            allergy.name = name
+        if description:
+            allergy.description = description
+        allergy.save()
+        return redirect('allergies')
+    # Render the allergies page but include the allergy to edit so template shows edit form
+    qs = Allergy.objects.filter(user=request.user)
+    return render(request, 'allergies_form.html', {'allergies': qs, 'allergy': allergy})

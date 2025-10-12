@@ -1,10 +1,196 @@
 {% extends 'base.html' %}
-{% block title %}My Allergies{% endblock %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
-    <h2 class="mb-4">My Allergies</h2>
-    <div class ="alert alert-info">
-        <strong>Note:</strong> This is a read-only summary of your allergies from your latest survey. To update your allergies, please <a href="{% url 'survey' %}">edit your survey</a>.
+<!-- page-wide backgrounds for breakfast (left), lunch (center), dinner (right) -->
+<div class="page-bg">
+    <div class="page-bg-item left" id="bg-breakfast"></div>
+    <div class="page-bg-item center" id="bg-lunch"></div>
+    <div class="page-bg-item right" id="bg-dinner"></div>
+</div>
+<div class="text-center mb-4">
+    <h1 class="display-6">Today's Meal Planner</h1>
+    <p class="text-muted">Click the button to generate suggestions for today (Breakfast, Lunch, Dinner).</p>
+</div>
+
+<div class="d-flex justify-content-center gap-4 mb-4 meal-circles">
+    <div class="meal-circle" id="breakfast">
+        <div class="meal-label">Breakfast</div>
+        <div class="meal-name" id="breakfast-name">{% if initial_plan %}{{ initial_plan.breakfast.name }}{% else %}—{% endif %}</div>
     </div>
+    <div class="meal-circle" id="lunch">
+        <div class="meal-label">Lunch</div>
+        <div class="meal-name" id="lunch-name">{% if initial_plan %}{{ initial_plan.lunch.name }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="meal-circle" id="dinner">
+        <div class="meal-label">Dinner</div>
+        <div class="meal-name" id="dinner-name">{% if initial_plan %}{{ initial_plan.dinner.name }}{% else %}—{% endif %}</div>
+    </div>
+</div>
+
+<!-- Modal to show ingredients/description -->
+<div class="modal fade" id="mealModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mealModalLabel">Meal details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Ingredients:</strong></p>
+                <p id="meal-ingredients" class="small text-muted"></p>
+                <hr>
+                <p><strong>Description:</strong></p>
+                <p id="meal-description" class="small"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mb-5">
+    <button id="generateBtn" class="btn btn-success btn-lg">Generate today's plan</button>
+    <div class="mt-2 small text-muted">Meal suggestions are AI-generated and saved to your account.</div>
+</div>
+
+<script>
+// Initialize UI from server-provided plan (if present)
+const initialPlan = {{ initial_plan_json|default:'null'|safe }};
+if (initialPlan) {
+    if (initialPlan.breakfast && initialPlan.breakfast.image) {
+        document.getElementById('breakfast').style.backgroundImage = `linear-gradient(rgba(10,20,10,0.28), rgba(10,20,10,0.12)), url('${initialPlan.breakfast.image}')`;
+        document.getElementById('bg-breakfast').style.backgroundImage = `linear-gradient(rgba(6,10,6,0.48), rgba(6,10,6,0.24)), url('${initialPlan.breakfast.image}')`;
+        document.getElementById('bg-breakfast').style.opacity = '1';
+    }
+    if (initialPlan.lunch && initialPlan.lunch.image) {
+        document.getElementById('lunch').style.backgroundImage = `linear-gradient(rgba(10,20,10,0.28), rgba(10,20,10,0.12)), url('${initialPlan.lunch.image}')`;
+        document.getElementById('bg-lunch').style.backgroundImage = `linear-gradient(rgba(6,10,6,0.48), rgba(6,10,6,0.24)), url('${initialPlan.lunch.image}')`;
+        document.getElementById('bg-lunch').style.opacity = '1';
+    }
+    if (initialPlan.dinner && initialPlan.dinner.image) {
+        document.getElementById('dinner').style.backgroundImage = `linear-gradient(rgba(10,20,10,0.28), rgba(10,20,10,0.12)), url('${initialPlan.dinner.image}')`;
+        document.getElementById('bg-dinner').style.backgroundImage = `linear-gradient(rgba(6,10,6,0.48), rgba(6,10,6,0.24)), url('${initialPlan.dinner.image}')`;
+        document.getElementById('bg-dinner').style.opacity = '1';
+    }
+    if (initialPlan.generation_count && initialPlan.generation_count >= 2) {
+        const btn = document.getElementById('generateBtn');
+        btn.innerText = 'Limit reached for today';
+        btn.disabled = true;
+    }
+    // set dataset fields so modal works on initial load
+    if (initialPlan.breakfast) {
+        const el = document.getElementById('breakfast');
+        el.dataset.ingredients = initialPlan.breakfast.ingredients || '';
+        el.dataset.description = initialPlan.breakfast.description || '';
+    }
+    if (initialPlan.lunch) {
+        const el = document.getElementById('lunch');
+        el.dataset.ingredients = initialPlan.lunch.ingredients || '';
+        el.dataset.description = initialPlan.lunch.description || '';
+    }
+    if (initialPlan.dinner) {
+        const el = document.getElementById('dinner');
+        el.dataset.ingredients = initialPlan.dinner.ingredients || '';
+        el.dataset.description = initialPlan.dinner.description || '';
+    }
+}
+
+async function generatePlan() {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerText = 'Generating...';
+    try {
+        function getCookie(name) {
+            let v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return v ? v.pop() : '';
+        }
+        const csrftoken = getCookie('csrftoken');
+        const res = await fetch('{% url 'generate_meals' %}', {method: 'POST', headers: {'X-CSRFToken': csrftoken}});
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        document.getElementById('breakfast-name').innerText = data.breakfast.name || '—';
+        document.getElementById('lunch-name').innerText = data.lunch.name || '—';
+        document.getElementById('dinner-name').innerText = data.dinner.name || '—';
+
+        // Apply background images with soft overlay to circles
+        function setCircleImage(id, imageUrl) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (imageUrl) {
+                el.style.backgroundImage = `linear-gradient(rgba(10,20,10,0.28), rgba(10,20,10,0.12)), url('${imageUrl}')`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+                el.style.color = '#fff';
+                el.style.textShadow = '0 2px 6px rgba(0,0,0,0.5)';
+            } else {
+                el.style.backgroundImage = '';
+                el.style.color = '';
+                el.style.textShadow = '';
+            }
+        }
+
+        setCircleImage('breakfast', data.breakfast.image);
+        setCircleImage('lunch', data.lunch.image);
+        setCircleImage('dinner', data.dinner.image);
+
+    // store meal details as data attributes for modal
+    document.getElementById('breakfast').dataset.ingredients = data.breakfast.ingredients || '';
+    document.getElementById('breakfast').dataset.description = data.breakfast.description || '';
+    document.getElementById('lunch').dataset.ingredients = data.lunch.ingredients || '';
+    document.getElementById('lunch').dataset.description = data.lunch.description || '';
+    document.getElementById('dinner').dataset.ingredients = data.dinner.ingredients || '';
+    document.getElementById('dinner').dataset.description = data.dinner.description || '';
+
+        // set page-wide backgrounds
+        function setPageBg(id, url) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (url) {
+                el.style.backgroundImage = `linear-gradient(rgba(6,10,6,0.48), rgba(6,10,6,0.24)), url('${url}')`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+                el.style.opacity = '1';
+            } else {
+                el.style.backgroundImage = '';
+                el.style.opacity = '0';
+            }
+        }
+
+        setPageBg('bg-breakfast', data.breakfast.image);
+        setPageBg('bg-lunch', data.lunch.image);
+        setPageBg('bg-dinner', data.dinner.image);
+
+        // show notice if generation limit reached
+        if (data.generation_count && data.generation_count >= 2) {
+            btn.innerText = 'Limit reached for today';
+            btn.disabled = true;
+        }
+    } catch (e) {
+        alert('Could not generate meals.');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Generate today's plan";
+    }
+}
+
+document.getElementById('generateBtn').addEventListener('click', generatePlan);
+
+// Attach click handlers to circles to open modal with details
+['breakfast','lunch','dinner'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => {
+        const ingredients = el.dataset.ingredients || '';
+        const description = el.dataset.description || '';
+        document.getElementById('meal-ingredients').innerText = ingredients || 'No ingredients available.';
+        document.getElementById('meal-description').innerText = description || 'No description available.';
+        const modal = new bootstrap.Modal(document.getElementById('mealModal'));
+        modal.show();
+    });
+});
+</script>
 
 {% endblock %}
