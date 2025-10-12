@@ -1,3 +1,41 @@
 {% extends 'base.html' %}
 {% block title %}My Allergies{% endblock %}
 
+{% block content %}
+    <h2 class="mb-4">My Allergies</h2>
+    <form method="post" class="mb-3" action="{% url 'add_allergy' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="allergies" class="form-label">List your allergies (comma-separated):</label>
+            <input type="text" class="form-control" id="allergies" name="allergies" placeholder="e.g. peanuts, shellfish, gluten">
+        </div>
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Save Allergies</button>
+    </form>
+    {% if message %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+        <hr>
+        <h4 class="mt-4">Your saved allergies</h4>
+        <div class="allergy-grid mt-3">
+            {% for a in allergies %}
+                <div class="allergy-card">
+                    <div class="allergy-header">
+                        <strong>{{ a.name }}</strong>
+                    </div>
+                    <div class="allergy-body">
+                        <p class="small text-muted">{{ a.description|default:'No description available.' }}</p>
+                    </div>
+                    <div class="allergy-footer">
+                        <form method="post" action="{% url 'delete_allergy' a.pk %}" onsubmit="return confirm('Are you sure you want to delete this allergy?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </div>  
+                </div>
+            {% empty %}
+                <div class="text-muted">No allergies saved yet.</div>
+            {% endfor %}
+        </div>
+{% endblock %}
+

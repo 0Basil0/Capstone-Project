@@ -8,14 +8,12 @@ from .forms import CustomUserCreationForm
 from .models import ChatHistory, Allergy
 from django.db.models import Max
 from django.views.decorators.http import require_POST
-import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 import os
 from google import genai
-from django.shortcuts import get_object_or_404
 
 
 class SignUpView(CreateView):
@@ -108,6 +106,8 @@ def survey_submit(request):
     # Save age 
     try:
         age = int(age_raw) if age_raw else None
+        if age is not None and (age < 0 or age > 100):
+            age = None
     except ValueError:
         age = None
     if age is not None:
@@ -119,15 +119,25 @@ def survey_submit(request):
     # Save allergies
     if allergies_text:
         names = [n.strip() for n in allergies_text.split(',') if n.strip()]
+        from .utils import generate_allergy_description
         for name in names:
             try:
-                Allergy.objects.get_or_create(user=user, name=name)
+                desc = generate_allergy_description(name)
+                obj, created = Allergy.objects.get_or_create(user=user, name=name, defaults={'description': desc})
+                if not created and not obj.description and desc:
+                    obj.description = desc
+                    obj.save()
             except Allergy.MultipleObjectsReturned:
                 qs = Allergy.objects.filter(user=user, name=name).order_by('id')
                 first = qs.first()
                 qs.exclude(pk=first.pk).delete()
+                if first and not first.description:
+                    desc = generate_allergy_description(name)
+                    if desc:
+                        first.description = desc
+                        first.save()
 
-    return redirect('home')
+    return redirect('allergies')
 
 @login_required
 def base(request):
@@ -141,8 +151,9 @@ class chatView(LoginRequiredMixin, ListView):
     template_name = 'chat_form.html'
     context_object_name = 'chats'
 
+    # Get distinct session_ids and order them by the most recent message timestamp per session
     def get(self, request, *args, **kwargs):
-        # Get distinct session_ids and order them by the most recent message timestamp per session
+        
         sessions = (
             ChatHistory.objects.filter(user=request.user)
             .values('session_id')
@@ -174,10 +185,12 @@ class chatView(LoginRequiredMixin, ListView):
 class AllergyListView(LoginRequiredMixin, ListView):
     model = Allergy
     
+    
     template_name = 'allergies_form.html'
     context_object_name = 'allergies'
     def get_queryset(self):
         return Allergy.objects.filter(user=self.request.user)
+        
 
 
 @login_required
@@ -199,9 +212,39 @@ def chat_get(request, session_id):
 @login_required
 @require_POST
 def chat_delete(request, session_id):
-    """Delete all chat history items in a session belonging to the user."""
+    # Delete all chat history items in a session belonging to the user.
     qs = ChatHistory.objects.filter(user=request.user, session_id=session_id)
     if not qs.exists():
         return JsonResponse({"error": "Session not found"}, status=404)
     qs.delete()
     return JsonResponse({"deleted": True})
+
+@login_required
+def add_allergy(request):
+    allergies_text = request.POST.get('allergies')  
+    user = request.user
+    # Save allergies..
+    if allergies_text:
+            names = [n.strip() for n in allergies_text.split(',') if n.strip()]
+            from .utils import generate_allergy_description
+            for name in names:
+                try:
+                    desc = generate_allergy_description(name)
+                    obj, created = Allergy.objects.get_or_create(user=user, name=name, defaults={'description': desc})
+                    if not created and not obj.description and desc:
+                        obj.description = desc
+                        obj.save()
+                except Allergy.MultipleObjectsReturned:
+                    qs = Allergy.objects.filter(user=user, name=name).order_by('id')
+                    first = qs.first()
+                    qs.exclude(pk=first.pk).delete()
+                    if first and not first.description:
+                        desc = generate_allergy_description(name)
+                        if desc:
+                            first.description = desc
+                            first.save()
+    return redirect('allergies')
+def delete_allergy(request, pk):
+    allergy = Allergy.objects.get(pk=pk)
+    allergy.delete()
+    return redirect('allergies')

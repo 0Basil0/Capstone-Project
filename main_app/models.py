@@ -47,13 +47,13 @@ class ChatHistory(models.Model):
 
     @property
     def preview(self):
-        """A short preview of the conversation entry."""
+        # A short preview of the conversation entry.
         text = (self.user_message or '')
         if len(text) > 80:
             return text[:77] + '...'
         return text
 class Profile(models.Model):
-    """Simple profile to store extra user attributes like age."""
+    # Simple profile to store extra user attributes like age.
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     age = models.PositiveIntegerField(null=True, blank=True)
 

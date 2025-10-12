@@ -7,10 +7,11 @@ urlpatterns = [
     path("post_login/", views.post_login, name="post_login"),
     path("survey/", views.survey, name="survey"),
     path("survey/submit/", views.survey_submit, name="survey_submit"),
+    path("allergies/add/", views.add_allergy, name="add_allergy"),
     path("chat/", views.chatView.as_view(), name="chat"),
     path("chat/session/<uuid:session_id>/", views.chat_get, name="chat_get"),
     path("chat/session/<uuid:session_id>/delete/", views.chat_delete, name="chat_delete"),
     path("allergies/", views.AllergyListView.as_view(), name="allergies"),
     path("chat-api/", views.chatbot_api, name="chatbot_api"),
-    
+    path("allergies/<int:pk>/delete/", views.delete_allergy, name="delete_allergy"),
 ]

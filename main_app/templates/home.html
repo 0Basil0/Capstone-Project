@@ -3,5 +3,8 @@
 
 {% block content %}
     <h2 class="mb-4">My Allergies</h2>
-    
-{%endblock%}
+    <div class ="alert alert-info">
+        <strong>Note:</strong> This is a read-only summary of your allergies from your latest survey. To update your allergies, please <a href="{% url 'survey' %}">edit your survey</a>.
+    </div>
+
+{% endblock %}

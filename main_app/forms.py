@@ -10,7 +10,6 @@ class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)
     age = forms.IntegerField(required=False, min_value=0, max_value=150)
 
-    allergies = forms.CharField(required=False, help_text='Comma-separated list of allergies', widget=forms.TextInput())
 
     class Meta:
         model = User
@@ -25,16 +24,7 @@ class CustomUserCreationForm(UserCreationForm):
         if commit:
             user.save()
 
-            # handle allergies: create Allergy rows for each comma-separated name
-            allergies_text = self.cleaned_data.get('allergies', '') or ''
-            names = [n.strip() for n in allergies_text.split(',') if n.strip()]
-            for name in names:
-                try:
-                    Allergy.objects.get_or_create(user=user, name=name)
-                except Allergy.MultipleObjectsReturned:
-                    qs = Allergy.objects.filter(user=user, name=name).order_by('id')
-                    first = qs.first()
-                    qs.exclude(pk=first.pk).delete()
+
             age = self.cleaned_data.get('age')
             if age is not None:
 
