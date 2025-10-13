@@ -1,5 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>You have logged out successfully.</h2>
-<a href="{% url 'login' %}">Login again</a>
+<div class="login-viewport">
+	<div class="login-card fade-in-up card">
+		<div class="card-body text-center">
+			<h2 class="mb-2">You have logged out successfully.</h2>
+			<a href="{% url 'login' %}" class="btn btn-outline-success mt-3">Login again</a>
+		</div>
+	</div>
+</div>
 {% endblock %}

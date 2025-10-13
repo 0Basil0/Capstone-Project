@@ -111,4 +111,4 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
     except Exception:
         return None
 
-
+generate_image("image for human ")

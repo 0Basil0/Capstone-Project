@@ -16,15 +16,30 @@
 <div class="d-flex justify-content-center gap-4 mb-4 meal-circles">
     <div class="meal-circle" id="breakfast">
         <div class="meal-label">Breakfast</div>
+        <button class="close-expanded" aria-label="Close">×</button>
         <div class="meal-name" id="breakfast-name">{% if initial_plan %}{{ initial_plan.breakfast.name }}{% else %}—{% endif %}</div>
+        <div class="meal-details" aria-hidden="true">
+            <p class="small text-muted meal-ings" id="breakfast-ings"></p>
+            <p class="small meal-desc" id="breakfast-desc"></p>
+        </div>
     </div>
     <div class="meal-circle" id="lunch">
         <div class="meal-label">Lunch</div>
+        <button class="close-expanded" aria-label="Close">×</button>
         <div class="meal-name" id="lunch-name">{% if initial_plan %}{{ initial_plan.lunch.name }}{% else %}—{% endif %}</div>
+        <div class="meal-details" aria-hidden="true">
+            <p class="small text-muted meal-ings" id="lunch-ings"></p>
+            <p class="small meal-desc" id="lunch-desc"></p>
+        </div>
     </div>
     <div class="meal-circle" id="dinner">
         <div class="meal-label">Dinner</div>
+        <button class="close-expanded" aria-label="Close">×</button>
         <div class="meal-name" id="dinner-name">{% if initial_plan %}{{ initial_plan.dinner.name }}{% else %}—{% endif %}</div>
+        <div class="meal-details" aria-hidden="true">
+            <p class="small text-muted meal-ings" id="dinner-ings"></p>
+            <p class="small meal-desc" id="dinner-desc"></p>
+        </div>
     </div>
 </div>
 
@@ -58,21 +73,45 @@
 <script>
 // Initialize UI from server-provided plan (if present)
 const initialPlan = {{ initial_plan_json|default:'null'|safe }};
+// preserve original state for each circle so we can restore when closing
+const originalState = {};
+['breakfast','lunch','dinner'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    originalState[id] = {
+        name: document.getElementById(`${id}-name`)?.innerText || '',
+        ingredients: el.dataset.ingredients || '',
+        description: el.dataset.description || '',
+        background: el.style.backgroundImage || '',
+        color: el.style.color || '',
+        textShadow: el.style.textShadow || ''
+    };
+});
 if (initialPlan) {
     if (initialPlan.breakfast && initialPlan.breakfast.image) {
         document.getElementById('breakfast').style.backgroundImage = `linear-gradient(rgba(10,20,10,0.28), rgba(10,20,10,0.12)), url('${initialPlan.breakfast.image}')`;
         document.getElementById('bg-breakfast').style.backgroundImage = `linear-gradient(rgba(6,10,6,0.48), rgba(6,10,6,0.24)), url('${initialPlan.breakfast.image}')`;
         document.getElementById('bg-breakfast').style.opacity = '1';
+        // Persist snapshot so closing restores this image
+        originalState['breakfast'].background = document.getElementById('breakfast').style.backgroundImage || originalState['breakfast'].background;
+        originalState['breakfast'].color = document.getElementById('breakfast').style.color || originalState['breakfast'].color;
+        originalState['breakfast'].textShadow = document.getElementById('breakfast').style.textShadow || originalState['breakfast'].textShadow;
     }
     if (initialPlan.lunch && initialPlan.lunch.image) {
         document.getElementById('lunch').style.backgroundImage = `linear-gradient(rgba(10,20,10,0.28), rgba(10,20,10,0.12)), url('${initialPlan.lunch.image}')`;
         document.getElementById('bg-lunch').style.backgroundImage = `linear-gradient(rgba(6,10,6,0.48), rgba(6,10,6,0.24)), url('${initialPlan.lunch.image}')`;
         document.getElementById('bg-lunch').style.opacity = '1';
+        originalState['lunch'].background = document.getElementById('lunch').style.backgroundImage || originalState['lunch'].background;
+        originalState['lunch'].color = document.getElementById('lunch').style.color || originalState['lunch'].color;
+        originalState['lunch'].textShadow = document.getElementById('lunch').style.textShadow || originalState['lunch'].textShadow;
     }
     if (initialPlan.dinner && initialPlan.dinner.image) {
         document.getElementById('dinner').style.backgroundImage = `linear-gradient(rgba(10,20,10,0.28), rgba(10,20,10,0.12)), url('${initialPlan.dinner.image}')`;
         document.getElementById('bg-dinner').style.backgroundImage = `linear-gradient(rgba(6,10,6,0.48), rgba(6,10,6,0.24)), url('${initialPlan.dinner.image}')`;
         document.getElementById('bg-dinner').style.opacity = '1';
+        originalState['dinner'].background = document.getElementById('dinner').style.backgroundImage || originalState['dinner'].background;
+        originalState['dinner'].color = document.getElementById('dinner').style.color || originalState['dinner'].color;
+        originalState['dinner'].textShadow = document.getElementById('dinner').style.textShadow || originalState['dinner'].textShadow;
     }
     if (initialPlan.generation_count && initialPlan.generation_count >= 2) {
         const btn = document.getElementById('generateBtn');
@@ -135,6 +174,15 @@ async function generatePlan() {
         setCircleImage('lunch', data.lunch.image);
         setCircleImage('dinner', data.dinner.image);
 
+        // Snapshot the newly-applied images so closing restores them instead of clearing
+        ['breakfast','lunch','dinner'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            originalState[id].background = el.style.backgroundImage || originalState[id].background;
+            originalState[id].color = el.style.color || originalState[id].color;
+            originalState[id].textShadow = el.style.textShadow || originalState[id].textShadow;
+        });
+
     // store meal details as data attributes for modal
     document.getElementById('breakfast').dataset.ingredients = data.breakfast.ingredients || '';
     document.getElementById('breakfast').dataset.description = data.breakfast.description || '';
@@ -177,19 +225,76 @@ async function generatePlan() {
 
 document.getElementById('generateBtn').addEventListener('click', generatePlan);
 
-// Attach click handlers to circles to open modal with details
+// Attach click handlers to circles to expand them and show inline details
+function collapseAll() {
+    ['breakfast','lunch','dinner'].forEach(i => {
+        const elx = document.getElementById(i);
+        if (!elx) return;
+        elx.classList.remove('expanded');
+        const details = elx.querySelector('.meal-details');
+        if (details) details.setAttribute('aria-hidden', 'true');
+        // restore original visible text and styles
+        const orig = originalState[i];
+        if (orig) {
+            const nameEl = document.getElementById(`${i}-name`);
+            if (nameEl) nameEl.innerText = orig.name || '—';
+            const ingsEl = elx.querySelector('.meal-ings');
+            if (ingsEl) ingsEl.innerText = '';
+            const descEl = elx.querySelector('.meal-desc');
+            if (descEl) descEl.innerText = '';
+            elx.style.backgroundImage = orig.background || '';
+            elx.style.color = orig.color || '';
+            elx.style.textShadow = orig.textShadow || '';
+        }
+    });
+}
+
 ['breakfast','lunch','dinner'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.style.cursor = 'pointer';
-    el.addEventListener('click', () => {
-        const ingredients = el.dataset.ingredients || '';
-        const description = el.dataset.description || '';
-        document.getElementById('meal-ingredients').innerText = ingredients || 'No ingredients available.';
-        document.getElementById('meal-description').innerText = description || 'No description available.';
-        const modal = new bootstrap.Modal(document.getElementById('mealModal'));
-        modal.show();
+    el.addEventListener('click', (ev) => {
+        // if the user clicked the close button, don't expand
+        if (ev.target && ev.target.classList && ev.target.classList.contains('close-expanded')) return;
+        const isExpanded = el.classList.contains('expanded');
+        // collapse others
+        collapseAll();
+        if (!isExpanded) {
+            // populate inline details
+            const ings = el.dataset.ingredients || '';
+            const desc = el.dataset.description || '';
+            const ingsEl = el.querySelector('.meal-ings');
+            const descEl = el.querySelector('.meal-desc');
+            if (ingsEl) ingsEl.innerText = ings || 'No ingredients available.';
+            if (descEl) descEl.innerText = desc || 'No description available.';
+            el.classList.add('expanded');
+            const details = el.querySelector('.meal-details');
+            if (details) details.setAttribute('aria-hidden', 'false');
+        }
     });
+    // close button handler
+    const closeBtn = el.querySelector('.close-expanded');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // restore this circle to original state
+            const orig = originalState[id];
+            if (orig) {
+                const nameEl = document.getElementById(`${id}-name`);
+                if (nameEl) nameEl.innerText = orig.name || '—';
+                const ingsEl = el.querySelector('.meal-ings');
+                if (ingsEl) ingsEl.innerText = '';
+                const descEl = el.querySelector('.meal-desc');
+                if (descEl) descEl.innerText = '';
+                el.style.backgroundImage = orig.background || '';
+                el.style.color = orig.color || '';
+                el.style.textShadow = orig.textShadow || '';
+            }
+            el.classList.remove('expanded');
+            const details = el.querySelector('.meal-details');
+            if (details) details.setAttribute('aria-hidden', 'true');
+        });
+    }
 });
 </script>
 

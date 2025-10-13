@@ -2,7 +2,10 @@
 {% block title %}My Allergies{% endblock %}
 
 {% block content %}
-    <h2 class="mb-4">My Allergies</h2>
+    <div class="page-viewport">
+        <div class="page-card fade-in-up card">
+            <div class="card-body">
+                <h2 class="mb-4">My Allergies</h2>
     {% if allergy %}
         <h5>Edit allergy</h5>
         <form method="post" class="mb-3" action="{% url 'edit_allergy' allergy.pk %}">
@@ -54,5 +57,9 @@
                 <div class="text-muted">No allergies saved yet.</div>
             {% endfor %}
         </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 

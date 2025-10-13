@@ -28,6 +28,8 @@ class MealPlan(models.Model):
     breakfast = models.ForeignKey(Food, related_name='breakfast_meals', on_delete=models.SET_NULL, null=True, blank=True)
     lunch = models.ForeignKey(Food, related_name='lunch_meals', on_delete=models.SET_NULL, null=True, blank=True)
     dinner = models.ForeignKey(Food, related_name='dinner_meals', on_delete=models.SET_NULL, null=True, blank=True)
+    # how many times the user generated (or regenerated) a plan for this day
+    generation_count = models.PositiveSmallIntegerField(default=0)
 
     def __str__(self):
         return f"{self.user.username} - {self.day}"

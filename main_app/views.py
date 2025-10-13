@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.views.generic import ListView,  CreateView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import logout
@@ -15,6 +15,8 @@ from django.http import JsonResponse
 import json
 import os
 from google import genai
+from django.views.decorators.http import require_POST
+
 
 
 class SignUpView(CreateView):
@@ -41,8 +43,6 @@ def survey(request):
 
 
 @login_required
-
-
 def chatbot_api(request):
     if request.method == "POST":
         # Set API key in environment variable 
@@ -198,10 +198,12 @@ def home(request):
     # Show today's meal placeholders and existing mealplans for user
     import datetime, os
     day = datetime.date.today().isoformat()
-    plan = MealPlan.objects.filter(user=request.user, day=day).first()
+
+    # Avoid selecting all MealPlan columns (some DBs may be missing new columns like generation_count).
+    plan_vals = MealPlan.objects.filter(user=request.user, day=day).values('breakfast_id', 'lunch_id', 'dinner_id').first()
 
     initial_plan = None
-    if plan:
+    if plan_vals:
         user_slug = request.user.username
         base_dir = os.path.dirname(os.path.abspath(__file__))
         images_base = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
@@ -212,11 +214,31 @@ def home(request):
                 return f"/static/images/generated/{user_slug}/{fname}"
             return None
 
+        # Load Food objects by id (these are safe to query)
+        breakfast = Food.objects.filter(pk=plan_vals.get('breakfast_id')).first() if plan_vals.get('breakfast_id') else None
+        lunch = Food.objects.filter(pk=plan_vals.get('lunch_id')).first() if plan_vals.get('lunch_id') else None
+        dinner = Food.objects.filter(pk=plan_vals.get('dinner_id')).first() if plan_vals.get('dinner_id') else None
+
         initial_plan = {
-            'breakfast': {'name': plan.breakfast.name if plan.breakfast else '', 'image': image_url_if_exists(f"{day}_breakfast.png")},
-            'lunch': {'name': plan.lunch.name if plan.lunch else '', 'image': image_url_if_exists(f"{day}_lunch.png")},
-            'dinner': {'name': plan.dinner.name if plan.dinner else '', 'image': image_url_if_exists(f"{day}_dinner.png")},
-            'generation_count': getattr(plan, 'generation_count', 0),
+            'breakfast': {
+                'name': breakfast.name if breakfast else '',
+                'image': image_url_if_exists(f"{day}_breakfast.png"),
+                'ingredients': breakfast.ingredients if breakfast else '',
+                'description': breakfast.description if breakfast else '',
+            },
+            'lunch': {
+                'name': lunch.name if lunch else '',
+                'image': image_url_if_exists(f"{day}_lunch.png"),
+                'ingredients': lunch.ingredients if lunch else '',
+                'description': lunch.description if lunch else '',
+            },
+            'dinner': {
+                'name': dinner.name if dinner else '',
+                'image': image_url_if_exists(f"{day}_dinner.png"),
+                'ingredients': dinner.ingredients if dinner else '',
+                'description': dinner.description if dinner else '',
+            },
+            'generation_count': 0,
         }
 
     import json
@@ -369,7 +391,6 @@ def add_allergy(request):
                             first.description = desc
                             first.save()
     return redirect('allergies')
-from django.views.decorators.http import require_POST
 
 
 @login_required

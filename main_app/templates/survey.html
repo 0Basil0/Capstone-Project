@@ -1,21 +1,17 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1 class="mb-4">Survey</h1>
-<form method="post" action="{% url 'survey_submit' %}">
-    {% csrf_token %}
-    <div class="mb-3">
-        <label for="question1" class="form-label">1. your First name</label>
-        <input type="text" class="form-control" id="question1" name="question1" required>
-        <label for="question2" class="form-label">2. your Last name</label> 
-        <input type="text" class="form-control" id="question2" name="question2" required>
-        <label for="question3" class="form-label">3. your Age</label>
-        <input type="number" class="form-control" id="question3" name="question3" required>
-        <label for="question5" class="form-label">4. What are your Allergies?</label>
-        <input type="text" class="form-control" id="question5" name="question5" required>
-    </div>
-
-    <button type="submit" class="btn btn-success">Submit</button>
-</form>
+<div class="survey-viewport">
+    <h1 class="mb-4">Quick Survey</h1>
+    <p class="text-muted">Tell us the allergies we should avoid when planning your meals.</p>
+    <form method="post" action="{% url 'survey_submit' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="question5" class="form-label">What are your Allergies? (comma-separated)</label>
+            <input type="text" class="form-control" id="question5" name="question5" placeholder="e.g. peanuts, shellfish, lactose" required>
+        </div>
+        <button type="submit" class="btn btn-success">Save Allergies</button>
+    </form>
+</div>
 
 {% endblock %}
