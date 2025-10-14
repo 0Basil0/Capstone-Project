@@ -10,13 +10,17 @@ from django.db.models import Max
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 import os
 from google import genai
 from django.views.decorators.http import require_POST
-
+from .utils import generate_daily_meals , generate_image
+import datetime
+import glob
+import re
+from django.db import connection, transaction, DatabaseError
+ 
 
 
 class SignUpView(CreateView):
@@ -92,31 +96,9 @@ def chatbot_api(request):
 def survey_submit(request):
     # Process survey fields and save to DB
     first = request.POST.get('question1')
-    last = request.POST.get('question2')
-    age_raw = request.POST.get('question3')
     allergies_text = request.POST.get('question5')
 
-    # Update user first/last name
     user = request.user
-    if first:
-        user.first_name = first
-    if last:
-        user.last_name = last
-    user.save()
-
-    # Save age 
-    try:
-        age = int(age_raw) if age_raw else None
-        if age is not None and (age < 0 or age > 100):
-            age = None
-    except ValueError:
-        age = None
-    if age is not None:
-        from .models import Profile
-        p, _ = Profile.objects.get_or_create(user=user)
-        p.age = age
-        p.save()
-
     # Save allergies
     if allergies_text:
         names = [n.strip() for n in allergies_text.split(',') if n.strip()]
@@ -196,7 +178,6 @@ class AllergyListView(LoginRequiredMixin, ListView):
 @login_required
 def home(request):
     # Show today's meal placeholders and existing mealplans for user
-    import datetime, os
     day = datetime.date.today().isoformat()
 
     # Avoid selecting all MealPlan columns (some DBs may be missing new columns like generation_count).
@@ -207,34 +188,47 @@ def home(request):
         user_slug = request.user.username
         base_dir = os.path.dirname(os.path.abspath(__file__))
         images_base = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
+        import glob
 
-        def image_url_if_exists(fname):
-            full = os.path.join(images_base, fname)
-            if os.path.exists(full):
-                return f"/static/images/generated/{user_slug}/{fname}"
-            return None
+        def image_url_if_exists_for_meal(meal_suffix):
+            pattern = os.path.join(images_base, f"{day}_*_{meal_suffix}.png")
+            matches = glob.glob(pattern)
+            if not matches:
+                legacy = os.path.join(images_base, f"{day}_{meal_suffix}.png")
+                if os.path.exists(legacy):
+                    return f"/static/images/generated/{user_slug}/{day}_{meal_suffix}.png"
+                return None
+            latest = max(matches, key=os.path.getmtime)
+            fname = os.path.basename(latest)
+            return f"/static/images/generated/{user_slug}/{fname}"
 
         # Load Food objects by id (these are safe to query)
         breakfast = Food.objects.filter(pk=plan_vals.get('breakfast_id')).first() if plan_vals.get('breakfast_id') else None
         lunch = Food.objects.filter(pk=plan_vals.get('lunch_id')).first() if plan_vals.get('lunch_id') else None
         dinner = Food.objects.filter(pk=plan_vals.get('dinner_id')).first() if plan_vals.get('dinner_id') else None
 
+        def strip_timestamp_suffix(name):
+            if not name:
+                return ''
+            # remove trailing space + 14-digit timestamp (YYYYMMDDHHMMSS)
+            return re.sub(r"\s*\d{14}$", '', name)
+
         initial_plan = {
             'breakfast': {
-                'name': breakfast.name if breakfast else '',
-                'image': image_url_if_exists(f"{day}_breakfast.png"),
+                'name': strip_timestamp_suffix(breakfast.name) if breakfast else '',
+                'image': image_url_if_exists_for_meal('breakfast'),
                 'ingredients': breakfast.ingredients if breakfast else '',
                 'description': breakfast.description if breakfast else '',
             },
             'lunch': {
-                'name': lunch.name if lunch else '',
-                'image': image_url_if_exists(f"{day}_lunch.png"),
+                'name': strip_timestamp_suffix(lunch.name) if lunch else '',
+                'image': image_url_if_exists_for_meal('lunch'),
                 'ingredients': lunch.ingredients if lunch else '',
                 'description': lunch.description if lunch else '',
             },
             'dinner': {
-                'name': dinner.name if dinner else '',
-                'image': image_url_if_exists(f"{day}_dinner.png"),
+                'name': strip_timestamp_suffix(dinner.name) if dinner else '',
+                'image': image_url_if_exists_for_meal('dinner'),
                 'ingredients': dinner.ingredients if dinner else '',
                 'description': dinner.description if dinner else '',
             },
@@ -250,59 +244,77 @@ def home(request):
 @require_POST
 def generate_and_save_meals(request):
     # Generate daily meals via AI and save them as Food + MealPlan for today
-    from .utils import generate_daily_meals
-    import datetime
+
 
     allergy_names = list(Allergy.objects.filter(user=request.user).values_list('name', flat=True))
-    import datetime
+    meals_today = list(MealPlan.objects.filter(user=request.user).values_list('breakfast__name', 'lunch__name', 'dinner__name'))
     day = datetime.date.today().isoformat()
-    data = generate_daily_meals(allergy_names=allergy_names)
+    data = generate_daily_meals(allergy_names=allergy_names, meals_today=meals_today)
     if not data:
         return JsonResponse({'error': 'Could not generate meals'}, status=502)
 
-    # Helper to upsert Food
-    def get_or_create_food(obj):
-        name = obj.get('name')[:100]
+    # Helper to always create a new Food record for each generation so images and
+    # DB entries are fresh every time the user clicks Generate.
+    def create_new_food(obj):
+        if not obj:
+            return None
+        # Keep the stored/display name clean (no timestamp suffix). The timestamp
+        # will be used only for image filenames.
+        raw_name = obj.get('name','').strip()[:100]
         ingredients = obj.get('ingredients','')
         description = obj.get('description','')
-        food, _ = Food.objects.get_or_create(name=name, defaults={'ingredients': ingredients, 'description': description})
-        # update if missing
-        changed = False
-        if not food.ingredients and ingredients:
-            food.ingredients = ingredients
-            changed = True
-        if not food.description and description:
-            food.description = description
-            changed = True
-        if changed:
-            food.save()
+        food = Food.objects.create(name=raw_name, ingredients=ingredients, description=description)
         return food
 
-    breakfast = get_or_create_food(data.get('breakfast', {})) if data.get('breakfast') else None
-    lunch = get_or_create_food(data.get('lunch', {})) if data.get('lunch') else None
-    dinner = get_or_create_food(data.get('dinner', {})) if data.get('dinner') else None
+    # Use a timestamp so each generation writes new image files
+    ts = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    breakfast = create_new_food(data.get('breakfast', {})) if data.get('breakfast') else None
+    lunch = create_new_food(data.get('lunch', {})) if data.get('lunch') else None
+    dinner = create_new_food(data.get('dinner', {})) if data.get('dinner') else None
+    print("Generated meals:", breakfast, lunch, dinner)
 
     # Generate background images for each meal and save into static/images/generated/<user>/<day>_
-    from .utils import generate_image
     user_slug = request.user.username
     day = datetime.date.today().isoformat()
     images = {}
     try:
+        # ensure user's image directory exists
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        images_folder = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
+        os.makedirs(images_folder, exist_ok=True)
+
+        # Helper to find the most recent timestamped image for a given meal.
+
+
+        def image_url_if_exists_for_meal(meal_suffix):
+            # meal_suffix expected like 'breakfast' or 'lunch' or 'dinner'
+            pattern = os.path.join(images_folder, f"{day}_*_{meal_suffix}.png")
+            matches = glob.glob(pattern)
+            if not matches:
+                # fallback to previous non-timestamped name
+                legacy = os.path.join(images_folder, f"{day}_{meal_suffix}.png")
+                if os.path.exists(legacy):
+                    return f"/static/images/generated/{user_slug}/{day}_{meal_suffix}.png"
+                return None
+            # pick the most recently modified file
+            latest = max(matches, key=os.path.getmtime)
+            fname = os.path.basename(latest)
+            return f"/static/images/generated/{user_slug}/{fname}"
         if breakfast:
             prompt = f"{breakfast.name}: {breakfast.ingredients}. {breakfast.description}"
-            img_rel = f"images/generated/{user_slug}/{day}_breakfast.png"
+            img_rel = f"images/generated/{user_slug}/{day}_{ts}_breakfast.png"
             images['breakfast_img'] = generate_image(prompt, output_path=img_rel)
         else:
             images['breakfast_img'] = None
         if lunch:
             prompt = f"{lunch.name}: {lunch.ingredients}. {lunch.description}"
-            img_rel = f"images/generated/{user_slug}/{day}_lunch.png"
+            img_rel = f"images/generated/{user_slug}/{day}_{ts}_lunch.png"
             images['lunch_img'] = generate_image(prompt, output_path=img_rel)
         else:
             images['lunch_img'] = None
         if dinner:
             prompt = f"{dinner.name}: {dinner.ingredients}. {dinner.description}"
-            img_rel = f"images/generated/{user_slug}/{day}_dinner.png"
+            img_rel = f"images/generated/{user_slug}/{day}_{ts}_dinner.png"
             images['dinner_img'] = generate_image(prompt, output_path=img_rel)
         else:
             images['dinner_img'] = None
@@ -310,7 +322,17 @@ def generate_and_save_meals(request):
         images = {'breakfast_img': None, 'lunch_img': None, 'dinner_img': None}
 
     day = datetime.date.today().isoformat()
-    plan, created = MealPlan.objects.update_or_create(user=request.user, day=day, defaults={'breakfast': breakfast, 'lunch': lunch, 'dinner': dinner})
+    plan, created = MealPlan.objects.get_or_create(user=request.user, day=day)
+    plan.breakfast = breakfast
+    plan.lunch = lunch
+    plan.dinner = dinner
+    # increment generation counter if field exists
+    try:
+        plan.generation_count = (plan.generation_count or 0) + 1
+    except Exception:
+        # if field missing or not available, ignore
+        pass
+    plan.save()
 
     # Return JSON with saved plan info
     return JsonResponse({
@@ -398,12 +420,27 @@ def add_allergy(request):
 def delete_allergy(request, pk):
     # Only allow owner to delete
     allergy = get_object_or_404(Allergy, pk=pk, user=request.user)
-    allergy.delete()
-    return redirect('allergies')
+    # to delete rows from the (possibly-missing) many-to-many join table.
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    'DELETE FROM main_app_allergy WHERE id = %s AND user_id = %s',
+                    [allergy.id, request.user.id]
+                )
+        return redirect('allergies')
+    except DatabaseError as e:
+        # If SQL fails, fall back to ORM delete (this may still raise the original ProgrammingError)
+        try:
+            allergy.delete()
+        except Exception as e2:
+            return JsonResponse({"error": str(e2)}, status=400)
+        return redirect('allergies')
 
 
 @login_required
 def edit_allergy(request, pk):
+
     # Only allow owner to edit
     allergy = get_object_or_404(Allergy, pk=pk, user=request.user)
     if request.method == "POST":
@@ -418,3 +455,4 @@ def edit_allergy(request, pk):
     # Render the allergies page but include the allergy to edit so template shows edit form
     qs = Allergy.objects.filter(user=request.user)
     return render(request, 'allergies_form.html', {'allergies': qs, 'allergy': allergy})
+

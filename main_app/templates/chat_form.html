@@ -162,7 +162,7 @@ function addConversationToSidebar(id, userMsg, botResp) {
 function updateConversationEntry(id, userMsg, botResp) {
   const container = document.getElementById('conversations');
   const selector = `.chat-item[data-session-id="${id}"]`;
-  const existingNodes = Array.from(container.querySelectorAll(selector));
+  const existingNodes = Array.from(container.querySelectorAll(selector));   
   if (existingNodes.length === 0) return false;
   const existing = existingNodes[0];
   // Update preview paragraph

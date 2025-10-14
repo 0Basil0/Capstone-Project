@@ -281,6 +281,46 @@ footer {
     color: #234d24;
 }
 
+/* Make circle text sharp and readable over images by adding a semi-opaque overlay
+   and moving text above it with strong text-shadow. */
+.meal-circle {
+    overflow: hidden;
+}
+.meal-circle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    /* gentle dark overlay that improves contrast for text */
+    background: linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.12));
+    z-index: 1;
+    pointer-events: none;
+    transition: background 200ms ease;
+}
+.meal-circle:hover::before,
+.meal-circle.expanded::before {
+    background: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.25));
+}
+.meal-circle > * {
+    position: relative;
+    z-index: 2;
+}
+.meal-label {
+    color: #fff;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.85);
+    font-weight: 800;
+}
+.meal-name {
+    color: #fff;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.85);
+    font-weight: 700;
+}
+.meal-circle .meal-ings,
+.meal-circle .meal-desc {
+    color: #f3f3f3;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
 /* Expanded circle animation */
 .meal-circle.expanded {
     position: fixed !important;
@@ -360,4 +400,33 @@ footer {
 
 @media (max-width: 992px) {
     .page-bg-item { display: none; }
+}
+
+/* Mobile: stack circles vertically and show a single unified page background (center image)
+   This makes the circles appear one under another and uses the center image as a full-width background. */
+@media (max-width: 768px) {
+    .meal-circles {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    /* Make circles responsive while keeping circular aspect */
+    .meal-circle {
+        width: 80vw;
+        height: 80vw;
+        max-width: 360px;
+        max-height: 360px;
+        border-radius: 50%;
+    }
+    /* Use only the center page background as a unified background on small screens */
+    .page-bg-item { display: none !important; }
+    .page-bg-item.center {
+        display: block !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        opacity: 1 !important;
+        background-size: cover !important;
+        background-position: center center !important;
+    }
 }

@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from google import genai
 import requests
@@ -33,15 +34,17 @@ def generate_allergy_description(name: str) -> str:
         return ""
 
 
-def generate_daily_meals(allergy_names=None):
+def generate_daily_meals(allergy_names=None, meals_today=None):
     """Generate a simple breakfast/lunch/dinner suggestion using the genai client.
     Returns a dict: { 'breakfast': {name, ingredients, description}, 'lunch': {...}, 'dinner': {...} }
     allergy_names: optional list of allergy names to avoid in suggestions.
     """
-    import os
-    from google import genai
+ 
+
     if allergy_names is None:
         allergy_names = []
+    if meals_today is None:
+        meals_today = []
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
         if api_key:
@@ -54,6 +57,9 @@ def generate_daily_meals(allergy_names=None):
             f"Each field should contain an object with name, ingredients (comma-separated), and a one-sentence description. "
             f"Avoid any ingredients that commonly contain these allergens: {avoid}. "
             f"Return ONLY valid JSON. Keep names short and ingredients concise."
+            f" Do not include any additional text outside the JSON object."
+            f" dont repeat meal names"
+            f" dont give me meals that i have already had today {meals_today}"
         )
 
         response = client.models.generate_content(
@@ -111,4 +117,4 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
     except Exception:
         return None
 
-generate_image("image for human ")
+generate_daily_meals("milk")
