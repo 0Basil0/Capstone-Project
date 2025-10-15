@@ -16,7 +16,6 @@ Core Features
     3.	Food & Recipe Database: Catalog of foods tagged with allergens.
     4.	AI Chatbot: Conversational assistant that checks ingredient safety and provides recommendations.
     5.	Day Meal Planner: Automatically generates meal plans based on user allergies.
-
     6.	Dashboard: Visual summary of safe foods and AI suggestions.
 _______________________________________
 🧩 User Stories
@@ -34,7 +33,7 @@ _______________________________________
     • As a user, I can add one or more allergies using a comma-separated input field.
     • As a user, I can view all my saved allergies and see their descriptions.
     • As a user, I can edit or delete any of my saved allergies.
-    
+
 🍽️ Meal Planner
     • As a user, I can generate AI-suggested meals for the current day (Breakfast, Lunch, Dinner) by clicking “Generate Today’s Plan.”
     • When a plan is generated:
@@ -55,10 +54,23 @@ _______________________________________
         o Delete an entire chat session when no longer needed.
     • The chat interface displays:
         o My avatar or initials next to my messages.
-📚 References
-    • AI Text Generation: Powered by Gemini API (Google AI).
-    • AI Image Generation: Uses Pollinations API to generate dynamic and realistic meal images.
+
 _______________________________________
 NutriGuard ERD:
 
 ![NutriGuard ERD](https://raw.githubusercontent.com/0Basil0/Capstone-Project/main/files/NutriGuard_ERD.png)
+
+_______________________________________
+📝 Submission Process
+
+Create an issue in the course repository with the following details:
+    • Title format:
+       o Basil Abouqanouneh - Capstone
+
+Include in the issue description:
+   • https://github.com/0Basil0/Capstone-Project?tab=readme-ov-file
+_______________________________________
+
+📚 References
+    • AI Text Generation: Powered by Gemini API (Google AI).
+    • AI Image Generation: Uses Pollinations API to generate dynamic and realistic meal images.
