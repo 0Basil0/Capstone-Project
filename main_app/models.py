@@ -58,9 +58,23 @@ class Profile(models.Model):
     # Simple profile to store extra user attributes like age.
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     age = models.PositiveIntegerField(null=True, blank=True)
+    # Optional avatar image uploaded by the user
+    avatar = models.ImageField(upload_to='avatars/%Y/%m/%d/', null=True, blank=True)
 
     def __str__(self):
         return f"Profile for {self.user.username}"
+
+    @property
+    def initials(self):
+        # Return first letter of first name + first letter of last name, uppercase.
+        fn = (self.user.first_name or '').strip()
+        ln = (self.user.last_name or '').strip()
+        a = fn[0] if fn else ''
+        b = ln[0] if ln else ''
+        if not a and not b:
+            # fallback to username first char
+            return (self.user.username or '')[:1].upper()
+        return (a + b).upper()
 
 
 @receiver(post_save, sender=User)

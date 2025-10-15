@@ -2,6 +2,43 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Allergy
+from .models import Profile
+
+
+class ProfileAvatarForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['avatar']
+
+
+class ProfileForm(forms.ModelForm):
+    first_name = forms.CharField(required=False, max_length=30)
+    last_name = forms.CharField(required=False, max_length=150)
+
+    class Meta:
+        model = Profile
+        fields = ['age', 'avatar']
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            # populate initial user fields
+            self.fields['first_name'].initial = user.first_name
+            self.fields['last_name'].initial = user.last_name
+
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        # save user fields
+        user = getattr(profile, 'user', None)
+        if user:
+            user.first_name = self.cleaned_data.get('first_name', user.first_name)
+            user.last_name = self.cleaned_data.get('last_name', user.last_name)
+            if commit:
+                user.save()
+        if commit:
+            profile.save()
+        return profile
 
 
 class CustomUserCreationForm(UserCreationForm):

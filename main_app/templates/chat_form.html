@@ -9,6 +9,15 @@
       <button class="btn btn-sm btn-primary" id="newChatBtn">New Chat</button>
     </div>
 
+    <!-- Avatar display (uploads moved to Edit profile page) -->
+    <div class="mb-3 d-flex align-items-center gap-2">
+      {% if profile and profile.avatar %}
+        <img src="{{ profile.avatar.url }}" alt="avatar" class="rounded-circle" width="150" height="150" style="object-fit:cover;">
+      {% else %}
+        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:48px;height:48px;font-weight:600">{% if profile %}{{ profile.initials }}{% else %}{{ user.username|slice:":1"|upper }}{% endif %}</div>
+      {% endif %}
+
+    </div>
     <div id="conversations" class="list-group" style="max-height:70vh; overflow:auto;">
       {% for chat in chats %}
         <a href="#" class="list-group-item list-group-item-action chat-item" data-session-id="{{ chat.session_id }}">
@@ -44,6 +53,8 @@
 </div>
 <script>
 const csrfToken = '{{ csrf_token }}';
+const profileAvatarUrl = {% if profile and profile.avatar %}'{{ profile.avatar.url }}'{% else %}null{% endif %};
+const profileInitials = {% if profile %}'{{ profile.initials }}'{% else %}'{{ user.username|slice:":1"|upper }}'{% endif %};
 let currentChatId = null;
 let isNewSession = false; // true when user clicked New Chat and the next send should create a sidebar entry
 
@@ -73,8 +84,10 @@ async function selectChat(sessionId) {
   messages.innerHTML = '';
   // server returns the full message list for the session
   for (const m of data.messages) {
-    messages.innerHTML += `<div><strong>You:</strong> ${escapeHtml(m.user_message)}</div>`;
-    messages.innerHTML += `<div class="text-success"><strong>AI:</strong> ${escapeHtml(m.bot_response)}</div>`;
+    // user message bubble with avatar/initials
+    const userAvatarHtml = profileAvatarUrl ? (`<img src="${profileAvatarUrl}" class="rounded-circle" width="32" height="32" style="object-fit:cover;margin-right:8px;">`) : (`<div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;font-weight:600;margin-right:8px;">${profileInitials}</div>`);
+    messages.innerHTML += `<div class="d-flex align-items-start mb-1"><div>${userAvatarHtml}</div><div><strong>You:</strong> ${escapeHtml(m.user_message)}</div></div>`;
+    messages.innerHTML += `<div class="text-success ms-5"><strong>AI:</strong> ${escapeHtml(m.bot_response)}</div>`;
   }
   scrollChatToBottom();
 }
@@ -86,7 +99,8 @@ async function sendMessage() {
 
   // show optimistic user message
   const messages = document.getElementById('messages');
-  messages.innerHTML += `<div><strong>You:</strong> ${escapeHtml(message)}</div>`;
+  const userAvatarHtml = profileAvatarUrl ? (`<img src="${profileAvatarUrl}" class="rounded-circle" width="32" height="32" style="object-fit:cover;margin-right:8px;">`) : (`<div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;font-weight:600;margin-right:8px;">${profileInitials}</div>`);
+  messages.innerHTML += `<div class="d-flex align-items-start mb-1"><div>${userAvatarHtml}</div><div><strong>You:</strong> ${escapeHtml(message)}</div></div>`;
   scrollChatToBottom();
 
   const res = await fetch("{% url 'chatbot_api' %}", {

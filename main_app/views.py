@@ -33,17 +33,8 @@ def custom_logout(request):
     return redirect('login')
 
 
-@login_required
-def post_login(request):
-    # If user has no allergies recorded, send them to survey; otherwise go home
-    if not Allergy.objects.filter(user=request.user).exists():
-        return redirect('survey')
-    return redirect('home')     
 
 
-@login_required
-def survey(request):
-    return render(request, 'survey.html')
 
 
 @login_required
@@ -92,39 +83,9 @@ def chatbot_api(request):
             return JsonResponse({"error": str(e)}, status=502)
 
 @login_required
-@require_POST
-def survey_submit(request):
-    # Process survey fields and save to DB
-    first = request.POST.get('question1')
-    allergies_text = request.POST.get('question5')
-
-    user = request.user
-    # Save allergies
-    if allergies_text:
-        names = [n.strip() for n in allergies_text.split(',') if n.strip()]
-        from .utils import generate_allergy_description
-        for name in names:
-            try:
-                desc = generate_allergy_description(name)
-                obj, created = Allergy.objects.get_or_create(user=user, name=name, defaults={'description': desc})
-                if not created and not obj.description and desc:
-                    obj.description = desc
-                    obj.save()
-            except Allergy.MultipleObjectsReturned:
-                qs = Allergy.objects.filter(user=user, name=name).order_by('id')
-                first = qs.first()
-                qs.exclude(pk=first.pk).delete()
-                if first and not first.description:
-                    desc = generate_allergy_description(name)
-                    if desc:
-                        first.description = desc
-                        first.save()
-
-    return redirect('allergies')
-
-@login_required
 def base(request):
-    return render (request, 'base.html')
+    # Redirect root/base to the user's home dashboard
+    return redirect('home')
 @login_required
 def home(request):
     return render (request, 'home.html')
@@ -164,7 +125,42 @@ class chatView(LoginRequiredMixin, ListView):
                 'last_timestamp': last.timestamp,
             })
 
-        return render(request, self.template_name, {'chats': summaries})
+        # Ensure profile is available in template context
+        profile = None
+        try:
+            profile = request.user.profile
+        except Exception:
+            profile = None
+        return render(request, self.template_name, {'chats': summaries, 'profile': profile})
+
+
+@login_required
+def upload_avatar(request):
+    # Simple endpoint to upload/change avatar from chat page.
+    if request.method != 'POST':
+        return redirect('chat')
+    from .forms import ProfileAvatarForm
+    # ensure profile exists (get_or_create returns (profile, created))
+    from .models import Profile as ProfileModel
+    profile_obj, _ = ProfileModel.objects.get_or_create(user=request.user)
+    form = ProfileAvatarForm(request.POST, request.FILES, instance=profile_obj)
+    if form.is_valid():
+        form.save()
+    return redirect('chat')
+
+
+@login_required
+def edit_profile(request):
+    from .forms import ProfileForm
+    profile_obj, _ = __import__('main_app.models', fromlist=['Profile']).Profile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=profile_obj, user=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('chat')
+    else:
+        form = ProfileForm(instance=profile_obj, user=request.user)
+    return render(request, 'profile_edit.html', {'form': form})
 class AllergyListView(LoginRequiredMixin, ListView):
     model = Allergy
     
