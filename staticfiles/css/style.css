@@ -1,0 +1,432 @@
+/* ========== GLOBAL STYLES ========== */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #262e26;
+    color: #333;
+    min-height: 100vh;
+}
+
+/* Subtle animated background gradient */
+@keyframes bgShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+body.animated-bg {
+    background: linear-gradient(120deg, #f7f9f7 0%, #eefef2 25%, #f7fff8 50%, #eefef2 75%, #f7f9f7 100%);
+    background-size: 300% 300%;
+    animation: bgShift 18s ease infinite;
+}
+
+/* Full-viewport background video */
+.bg-video {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: auto;
+    height: 100vh;
+    min-width: 100vw;
+    min-height: 100vh;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.92;
+}
+
+/* Links */
+a {
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+/* ========== NAVBAR ========== */
+.navbar {
+    background: linear-gradient(90deg, #198754, #2e9f67);
+}
+
+.logo-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.logo-circle:hover {
+    transform: scale(1.06);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+.logo-img {
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+}
+
+/* Logo pulse animation */
+@keyframes logoPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.06); }
+    70% { box-shadow: 0 0 0 8px rgba(25,135,84,0.06); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+.logo-circle.animated {
+    animation: logoPulse 4.5s ease-in-out infinite;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+}
+.nav-link {
+    color: #f1f1f1 !important;
+    font-weight: 500;
+    margin-left: 10px;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+.nav-link:hover {
+    color: #d4edda !important;
+    transform: scale(1.05);
+}
+
+/* ========== CARDS & CONTAINERS ========== */
+.fade-in-up {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: fadeUp 480ms ease forwards;
+}
+@keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+.card-header {
+    background-color: #198754;
+    color: white;
+    font-weight: 600;
+    border-top-left-radius: 15px !important;
+    border-top-right-radius: 15px !important;
+}
+
+/* ========== BUTTONS ========== */
+.btn-success {
+    background-color: #198754;
+    border: none;
+    border-radius: 8px;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+.btn-success:hover {
+    background-color: #157347;
+    transform: translateY(-2px);
+}
+.btn-outline-success {
+    border-color: #198754;
+    color: #198754;
+}
+.btn-outline-success:hover {
+    background-color: #198754;
+    color: white;
+}
+
+/* ========== FORMS ========== */
+form {
+    background-color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+form input,
+form select,
+form textarea {
+    border-radius: 10px !important;
+    border: 1px solid #ccc;
+}
+form input:focus,
+form select:focus,
+form textarea:focus {
+    border-color: #198754;
+    box-shadow: 0 0 3px rgba(25, 135, 84, 0.3);
+}
+
+/* ========== FOOTER ========== */
+footer {
+    background: linear-gradient(90deg, #198754, #2e9f67);
+    color: white;
+    font-size: 0.9rem;
+}
+
+/* ========== UTILITIES ========== */
+.text-success-light { color: #2e9f67 !important; }
+.rounded-15 { border-radius: 15px; }
+
+/* ========== LOGIN CARD ========== */
+.login-viewport {
+    min-height: calc(70vh);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+}
+.login-card {
+    width: 420px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(6px) saturate(120%);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(5,20,14,0.28);
+    border: 1px solid rgba(255,255,255,0.6);
+}
+.login-card .card-body { padding: 2rem; }
+.login-card input {
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.08);
+    margin-top: 6px;
+}
+.login-card .btn-lg { padding: 0.6rem 1.1rem; }
+.login-card .form-row { display: flex; flex-direction: column; }
+
+@media (max-width: 560px) {
+    .login-card { width: 92%; }
+}
+
+/* Wider card for larger pages (chat, allergies) */
+.page-viewport {
+    display: flex;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+}
+.page-card {
+    width: 1100px;
+    max-width: 96%;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.94);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.12);
+    border: 1px solid rgba(0,0,0,0.04);
+}
+.page-card .card-body { padding: 1.5rem; }
+@media (max-width: 1200px) {
+    .page-card { width: 92%; }
+}
+
+/* ========== ALLERGY CARDS ========== */
+.allergy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+.allergy-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f9fff9 100%);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    border: 1px solid rgba(25,135,84,0.06);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.allergy-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+}
+.allergy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.allergy-body {
+    font-size: 0.95rem;
+    color: #264d2b;
+}
+
+/* ========== MEAL PLANNER CIRCLES ========== */
+.meal-circles { gap: 2rem; }
+
+.meal-circle {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(240,255,240,0.9));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    text-align: center;
+    color: #234d24;
+    position: relative;
+    z-index: 20;
+    will-change: transform, width, height, top, left;
+}
+.meal-circle:hover {
+    transform: translateY(-6px) scale(1.02);
+}
+.meal-label {
+    font-weight: 700;
+    color: #1e7b41;
+    margin-bottom: 0.5rem;
+}
+.meal-name {
+    font-size: 1.05rem;
+    color: #234d24;
+}
+
+/* Make circle text sharp and readable over images by adding a semi-opaque overlay
+   and moving text above it with strong text-shadow. */
+.meal-circle {
+    overflow: hidden;
+}
+.meal-circle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    /* gentle dark overlay that improves contrast for text */
+    background: linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.12));
+    z-index: 1;
+    pointer-events: none;
+    transition: background 200ms ease;
+}
+.meal-circle:hover::before,
+.meal-circle.expanded::before {
+    background: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.25));
+}
+.meal-circle > * {
+    position: relative;
+    z-index: 2;
+}
+.meal-label {
+    color: #fff;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.85);
+    font-weight: 800;
+}
+.meal-name {
+    color: #fff;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.85);
+    font-weight: 700;
+}
+.meal-circle .meal-ings,
+.meal-circle .meal-desc {
+    color: #f3f3f3;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+/* Expanded circle animation */
+.meal-circle.expanded {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(1.9) !important;
+    width: 420px !important;
+    height: 420px !important;
+    z-index: 60 !important;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.28) !important;
+}
+.meal-circle .detail-panel {
+    display: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 12px;
+    width: 86%;
+    background: rgba(255,255,255,0.96);
+    color: #123;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    max-height: 38%;
+    overflow: auto;
+    text-align: left;
+}
+.meal-circle.expanded .detail-panel { display: block; }
+.meal-circle .close-expanded {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.92);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+}
+.meal-circle.expanded .close-expanded { display: block; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .meal-circle { width: 150px; height: 150px; }
+    .meal-circles { gap: 1rem; }
+    .meal-circle.expanded {
+        width: 320px !important;
+        height: 320px !important;
+        transform: translate(-50%,-50%) scale(1.6) !important;
+    }
+    .meal-circle .detail-panel { max-height: 36%; }
+}
+
+/* ========== PAGE BACKGROUND IMAGES ========== */
+.page-bg {
+    
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+}
+.page-bg-item {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 40%;
+    opacity: 0;
+    transition: opacity 480ms ease, transform 480ms ease;
+    filter: saturate(110%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+}
+.page-bg-item.left   { left: 0; right: 66.66%; }
+.page-bg-item.center { left: 33.33%; right: 33.33%; width: auto; }
+.page-bg-item.right  { left: 66.66%; right: 0; }
+
+@media (max-width: 992px) {
+    .page-bg-item { display: none; }
+}
+
+/* Mobile: stack circles vertically and show a single unified page background (center image)
+   This makes the circles appear one under another and uses the center image as a full-width background. */
+@media (max-width: 768px) {
+    .meal-circles {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    /* Make circles responsive while keeping circular aspect */
+    .meal-circle {
+        width: 80vw;
+        height: 80vw;
+        max-width: 360px;
+        max-height: 360px;
+        border-radius: 50%;
+    }
+    /* Use only the center page background as a unified background on small screens */
+    .page-bg-item { display: none !important; }
+    .page-bg-item.center {
+        display: block !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        opacity: 1 !important;
+        background-size: cover !important;
+        background-position: center center !important;
+    }
+}

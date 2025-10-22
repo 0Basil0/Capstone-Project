@@ -72,3 +72,16 @@ class CustomUserCreationForm(UserCreationForm):
 
 
         return user
+
+    def clean_email(self):
+        """Ensure the provided email address is not already used by another account.
+
+        This performs a case-insensitive check against existing users and raises
+        a ValidationError when a duplicate is found.
+        """
+        email = self.cleaned_data.get('email')
+        if email:
+            # Case-insensitive match
+            if User.objects.filter(email__iexact=email).exists():
+                raise forms.ValidationError("A user with that email address already exists.")
+        return email

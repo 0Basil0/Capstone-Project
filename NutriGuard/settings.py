@@ -10,8 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+# Load environment variables early so DEBUG and other settings pick up .env values
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,9 +26,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-$qxecl8luxlpja-_#4doe4gy0-t(g%j_6rk!fi%$ns&$i&*gax'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+# Read DEBUG from environment for easier local development; default to False.
+_debug_env = os.environ.get('DEBUG')
+if _debug_env is None:
+    # fall back to False unless explicitly set in environment/.env
+    DEBUG = False
+else:
+    # allow values like 'True', 'true', '1' to enable debug
+    DEBUG = _debug_env.lower() in ('1', 'true', 'yes')
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -42,6 +51,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise allows Django to serve its own static files in production
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -55,7 +66,7 @@ ROOT_URLCONF = 'NutriGuard.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -117,7 +128,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'main_app/static'),
+]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# Use WhiteNoise's compressed manifest storage for efficient static serving
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # Media files (user uploads)
 MEDIA_URL = '/media/'
@@ -136,9 +154,7 @@ LOGOUT_REDIRECT_URL = '/'
 # Comment out the line below if you want to keep the POST-only logout for better security
 # LOGOUT_URL = '/accounts/logout/'
 
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
+# Note: environment variables are loaded at module import time near the top of this file
 
 # Email configuration: use console backend when DEBUG is True (development).
 if DEBUG:

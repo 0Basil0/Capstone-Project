@@ -5,6 +5,8 @@ import requests
 from PIL import Image
 from io import BytesIO
 os.environ["GEMINI_API_KEY"] = "AIzaSyBYsuwdWzG5Vm70uJ_AuzKljDES4FpUxyA"
+# os.environ["GEMINI_API_KEY"] = "AIzaSyDWDJ-Ul87SKmcUdmkRWvCzus2vuLtI6KU"
+
 
 def generate_allergy_description(name: str) -> str:
     # Call the genai client to create a short description for an allergy name.
@@ -100,11 +102,15 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
         os.makedirs(os.path.dirname(full_output_path), exist_ok=True)
 
         # Format the prompt safely for URL
+        prompt = prompt.split(":")[0]
         safe_prompt = prompt.replace(" ", "%20")
         # Use external image generation API
-        url = f"https://image.pollinations.ai/prompt/{safe_prompt}?model=sdxl"
+        print(f"Requesting image generation for prompt: {safe_prompt}")
+        url = f"https://image.pollinations.ai/prompt/{safe_prompt}"
         response = requests.get(url, timeout=30)
+        print(response.status_code, response.headers.get('Content-Type'))
         if response.status_code == 200:
+            print("Image generation successful, processing image...")
             img = Image.open(BytesIO(response.content)).convert('RGBA')
             # Crop bottom pixels if requested and image is tall enough
             width, height = img.size
@@ -112,9 +118,9 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
             cropped_img = img.crop((0, 0, width, max(1, height - crop_h)))
             cropped_img.save(full_output_path)
             # Return URL path suitable for templates: /static/<output_path>
+            print(f"Generated image saved to: {full_output_path}")
             return '/static/' + output_path.replace('\\', '/')
         return None
     except Exception:
         return None
 
-generate_daily_meals("milk")

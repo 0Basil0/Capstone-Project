@@ -51,6 +51,8 @@
   </div>
 </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <script>
 const csrfToken = '{{ csrf_token }}';
 const profileAvatarUrl = {% if profile and profile.avatar %}'{{ profile.avatar.url }}'{% else %}null{% endif %};
@@ -87,7 +89,7 @@ async function selectChat(sessionId) {
     // user message bubble with avatar/initials
     const userAvatarHtml = profileAvatarUrl ? (`<img src="${profileAvatarUrl}" class="rounded-circle" width="32" height="32" style="object-fit:cover;margin-right:8px;">`) : (`<div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;font-weight:600;margin-right:8px;">${profileInitials}</div>`);
     messages.innerHTML += `<div class="d-flex align-items-start mb-1"><div>${userAvatarHtml}</div><div><strong>You:</strong> ${escapeHtml(m.user_message)}</div></div>`;
-    messages.innerHTML += `<div class="text-success ms-5"><strong>AI:</strong> ${escapeHtml(m.bot_response)}</div>`;
+    messages.innerHTML += `<div class="text-success ms-5"><strong>AI:</strong> ${marked.parse(escapeHtml(m.bot_response))}</div>`;
   }
   scrollChatToBottom();
 }
@@ -115,7 +117,7 @@ async function sendMessage() {
   if (data.error) {
     messages.innerHTML += `<div class="text-danger"><strong>Error:</strong> ${escapeHtml(data.error)}</div>`;
   } else {
-    messages.innerHTML += `<div class="text-success"><strong>AI:</strong> ${escapeHtml(data.reply)}</div>`;
+    messages.innerHTML += `<div class="text-success"><strong>AI:</strong> ${marked.parse(escapeHtml(data.reply))}</div>`;
     // set or update the active session id
     if (data.session_id) {
       // Set current session

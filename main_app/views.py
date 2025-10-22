@@ -54,10 +54,12 @@ def chatbot_api(request):
 
         client = genai.Client()
         # Log user message...
+        allergy_names = list(Allergy.objects.filter(user=request.user).values_list('name', flat=True))
+        prompt = f"I am {request.user.first_name} and I have these allergies {allergy_names} depend on these information let your answer . this is the question {user_message}"
         try:
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
-                contents=[{"parts": [{"text": user_message}]}],
+                contents=[{"parts": [{"text": prompt}]}],
             )
 
             reply = response.text

@@ -1,5 +1,7 @@
-from django.urls import  path, include
+from django.urls import  path
 from . import views
+from django.contrib.auth import views as auth_views
+
 urlpatterns = [
     path('', views.base, name='base'),
     path("signup/", views.SignUpView.as_view(), name="signup"),
@@ -16,4 +18,5 @@ urlpatterns = [
     path("profile/edit/", views.edit_profile, name="edit_profile"),
     path("allergies/<int:pk>/delete/", views.delete_allergy, name="delete_allergy"),
     path("allergies/<int:pk>/edit/", views.edit_allergy, name="edit_allergy"),
+    path('accounts/password_reset/', auth_views.PasswordResetView.as_view(html_email_template_name='registration/password_reset_email.html',), name='password_reset',),
 ]

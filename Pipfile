@@ -10,6 +10,7 @@ requests = "*"
 google-genai = "*"
 pillow = "*"
 python-dotenv = "*"
+replicate = "*"
 
 [dev-packages]
 
