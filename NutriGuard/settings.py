@@ -133,8 +133,15 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'main_app/static'),
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# Use WhiteNoise's compressed manifest storage for efficient static serving
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Use WhiteNoise storage. Manifest storage requires a working manifest created by
+# collectstatic and will raise an exception when templates reference files not
+# present in the manifest. For development and simple deployments use the
+# non-manifest compressed storage by default; set USE_MANIFEST=1 in the
+# environment to opt into Manifest behavior.
+if os.environ.get('USE_MANIFEST', '') == '1':
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+else:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 
 # Media files (user uploads)

@@ -30,3 +30,19 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Force the background video to use the login video while on the login page.
+    // The base template script will check window.FORCE_BG and use this URL.
+    // Use a direct static path to avoid ManifestStaticFilesStorage lookup errors
+    window.FORCE_BG = '/static/videos/login.mp4';
+
+    // Optional: ensure the video is visible behind the login viewport by
+    // tweaking CSS classes. We rely on existing styles in css/style.css.
+    (function(){
+        var root = document.documentElement;
+        root.classList.add('has-login-bg');
+    })();
+</script>
+{% endblock %}

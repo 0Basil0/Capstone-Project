@@ -13,9 +13,13 @@
         {% block extra_head %}{% endblock %}
     </head>
     <body class="bg-light d-flex flex-column min-vh-100 animated-bg">
-        <!-- Background video -->
-        <video id="bgVideo" class="bg-video" autoplay muted loop playsinline>
-            <source src="{% static 'images/BG.mp4' %}" type="video/mp4">
+        <!-- Background video (source chosen by page script).
+             By default it toggles between BG1 and BG2 on each page load. Pages can
+             force a specific video by setting window.FORCE_BG to a static url
+             (see `registration/login.html` for example). -->
+    <video id="bgVideo" class="bg-video" autoplay muted playsinline>
+            <!-- data attributes hold the two rotating background videos (use direct paths to avoid manifest errors) -->
+            <source data-bg1="/static/videos/BG1.mp4" data-bg2="/static/videos/BG2.mp4">
             Your browser does not support the video tag.
         </video>
         <nav class="navbar navbar-expand-lg navbar-dark bg-success shadow-sm">
@@ -94,5 +98,57 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="" crossorigin="anonymous"></script>
         {% block extra_scripts %}{% endblock %}
+
+        <!-- Script to select which background video to use.
+             Behavior:
+              - If a page sets window.FORCE_BG to a URL, that video is used.
+              - Otherwise the script toggles between BG1 and BG2 on each page load
+                using localStorage so the backgrounds alternate between pages.
+        -->
+        <script>
+            (function(){
+                try {
+                    var bgVideo = document.getElementById('bgVideo');
+                    if (!bgVideo) return;
+
+                    // First, allow pages to override the background video
+                    if (window.FORCE_BG) {
+                        bgVideo.innerHTML = '<source src="' + window.FORCE_BG + '" type="video/mp4">';
+                        bgVideo.load();
+                        // Ensure the video will not loop and will stop at the end
+                        bgVideo.loop = false;
+                        bgVideo.addEventListener('ended', function(){
+                            try { bgVideo.pause(); bgVideo.currentTime = bgVideo.duration; bgVideo.setAttribute('data-ended','1'); } catch(e){}
+                        }, { once: true });
+                        // Try to play (may be blocked by browser policies if not muted)
+                        bgVideo.play().catch(function(){});
+                        return;
+                    }
+
+                    // Otherwise read bg URLs from the first <source> element's data attributes
+                    var sourceEl = bgVideo.querySelector('source');
+                    var bg1 = sourceEl && sourceEl.getAttribute('data-bg1');
+                    var bg2 = sourceEl && sourceEl.getAttribute('data-bg2');
+                    if (!bg1 || !bg2) return;
+
+                    // Toggle index stored in localStorage (0 or 1) so backgrounds alternate
+                    var idx = localStorage.getItem('nutriguard_bg_idx');
+                    idx = idx === null ? 0 : (parseInt(idx,10) ^ 1);
+                    localStorage.setItem('nutriguard_bg_idx', String(idx));
+
+                    var chosen = idx === 0 ? bg1 : bg2;
+                    bgVideo.innerHTML = '<source src="' + chosen + '" type="video/mp4">';
+                    bgVideo.load();
+                    // Play once only: disable looping and stop when ended
+                    bgVideo.loop = false;
+                    bgVideo.addEventListener('ended', function(){
+                        try { bgVideo.pause(); bgVideo.currentTime = bgVideo.duration; bgVideo.setAttribute('data-ended','1'); } catch(e){}
+                    }, { once: true });
+                    bgVideo.play().catch(function(){});
+                } catch (err) {
+                    console.error('bg video script error', err);
+                }
+            })();
+        </script>
     </body>
 </html>

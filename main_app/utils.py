@@ -97,8 +97,20 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
     # output_path is treated as a relative path under main_app/static/, e.g. 'images/generated/user/day_breakfast.png'
     try:
         base_dir = os.path.dirname(os.path.abspath(__file__))  # path to main_app
-        static_dir = os.path.join(base_dir, 'static')
-        full_output_path = os.path.join(static_dir, output_path)
+        # Prefer saving generated images to MEDIA_ROOT (user-generated content).
+        # This way they are served via /media/ and do not require collectstatic.
+        try:
+            from django.conf import settings
+            media_root = getattr(settings, 'MEDIA_ROOT', None)
+        except Exception:
+            media_root = None
+
+        if media_root:
+            full_output_path = os.path.join(media_root, output_path)
+        else:
+            static_dir = os.path.join(base_dir, 'static')
+            full_output_path = os.path.join(static_dir, output_path)
+
         os.makedirs(os.path.dirname(full_output_path), exist_ok=True)
 
         # Format the prompt safely for URL
@@ -116,10 +128,26 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
             width, height = img.size
             crop_h = min(crop_bottom_px, height//6)
             cropped_img = img.crop((0, 0, width, max(1, height - crop_h)))
+            # Save into the app static folder (so development flow remains unchanged)
             cropped_img.save(full_output_path)
-            # Return URL path suitable for templates: /static/<output_path>
             print(f"Generated image saved to: {full_output_path}")
-            return '/static/' + output_path.replace('\\', '/')
+
+            # Return URL path suitable for templates: prefer /media/ if we saved to MEDIA_ROOT
+            if media_root:
+                return '/media/' + output_path.replace('\\', '/')
+            else:
+                # fallback to static path
+                try:
+                    from django.conf import settings
+                    static_root = getattr(settings, 'STATIC_ROOT', None)
+                    if static_root:
+                        # Also copy into STATIC_ROOT so WhiteNoise can serve it (best-effort)
+                        target_path = os.path.join(static_root, *output_path.replace('\\', '/').split('/'))
+                        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                        cropped_img.save(target_path)
+                except Exception:
+                    pass
+                return '/static/' + output_path.replace('\\', '/')
         return None
     except Exception:
         return None

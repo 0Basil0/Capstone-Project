@@ -182,19 +182,35 @@ def home(request):
     plan_vals = MealPlan.objects.filter(user=request.user, day=day).values('breakfast_id', 'lunch_id', 'dinner_id').first()
 
     initial_plan = None
+    # If there's no plan for today, fall back to the most recent saved plan so
+    # previously generated images still appear on the dashboard.
+    fallback_day = None
+    if not plan_vals:
+        latest_plan = MealPlan.objects.filter(user=request.user).order_by('-day').first()
+        if latest_plan:
+            plan_vals = {
+                'breakfast_id': getattr(latest_plan, 'breakfast_id', None),
+                'lunch_id': getattr(latest_plan, 'lunch_id', None),
+                'dinner_id': getattr(latest_plan, 'dinner_id', None),
+            }
+            fallback_day = latest_plan.day
+
     if plan_vals:
         user_slug = request.user.username
         base_dir = os.path.dirname(os.path.abspath(__file__))
         images_base = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
         import glob
 
+        # Use the day we looked up (today or fallback)
+        lookup_day = fallback_day or day
+
         def image_url_if_exists_for_meal(meal_suffix):
-            pattern = os.path.join(images_base, f"{day}_*_{meal_suffix}.png")
+            pattern = os.path.join(images_base, f"{lookup_day}_*_{meal_suffix}.png")
             matches = glob.glob(pattern)
             if not matches:
-                legacy = os.path.join(images_base, f"{day}_{meal_suffix}.png")
+                legacy = os.path.join(images_base, f"{lookup_day}_{meal_suffix}.png")
                 if os.path.exists(legacy):
-                    return f"/static/images/generated/{user_slug}/{day}_{meal_suffix}.png"
+                    return f"/static/images/generated/{user_slug}/{lookup_day}_{meal_suffix}.png"
                 return None
             latest = max(matches, key=os.path.getmtime)
             fname = os.path.basename(latest)
