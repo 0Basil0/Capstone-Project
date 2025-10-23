@@ -20,6 +20,7 @@ import datetime
 import glob
 import re
 from django.db import connection, transaction, DatabaseError
+from django.conf import settings
  
 
 
@@ -198,23 +199,39 @@ def home(request):
     if plan_vals:
         user_slug = request.user.username
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        images_base = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
-        import glob
+        # possible locations: MEDIA_ROOT (preferred for user-generated content) and app static folder
+        media_root = getattr(settings, 'MEDIA_ROOT', None)
+        media_base = os.path.join(media_root, 'images', 'generated', user_slug) if media_root else None
+        static_base = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
 
         # Use the day we looked up (today or fallback)
         lookup_day = fallback_day or day
 
         def image_url_if_exists_for_meal(meal_suffix):
-            pattern = os.path.join(images_base, f"{lookup_day}_*_{meal_suffix}.png")
-            matches = glob.glob(pattern)
-            if not matches:
-                legacy = os.path.join(images_base, f"{lookup_day}_{meal_suffix}.png")
+            """Return a URL (/media/... or /static/...) for the most recent image for a meal, or None."""
+            # search MEDIA first
+            if media_base:
+                pattern = os.path.join(media_base, f"{lookup_day}_*_{meal_suffix}.png")
+                matches = glob.glob(pattern)
+                if matches:
+                    latest = max(matches, key=os.path.getmtime)
+                    fname = os.path.basename(latest)
+                    return os.path.join(settings.MEDIA_URL, 'images', 'generated', user_slug, fname).replace('\\', '/')
+                legacy = os.path.join(media_base, f"{lookup_day}_{meal_suffix}.png")
                 if os.path.exists(legacy):
-                    return f"/static/images/generated/{user_slug}/{lookup_day}_{meal_suffix}.png"
-                return None
-            latest = max(matches, key=os.path.getmtime)
-            fname = os.path.basename(latest)
-            return f"/static/images/generated/{user_slug}/{fname}"
+                    return os.path.join(settings.MEDIA_URL, 'images', 'generated', user_slug, f"{lookup_day}_{meal_suffix}.png").replace('\\', '/')
+
+            # fallback to app static folder
+            pattern = os.path.join(static_base, f"{lookup_day}_*_{meal_suffix}.png")
+            matches = glob.glob(pattern)
+            if matches:
+                latest = max(matches, key=os.path.getmtime)
+                fname = os.path.basename(latest)
+                return f"/static/images/generated/{user_slug}/{fname}"
+            legacy = os.path.join(static_base, f"{lookup_day}_{meal_suffix}.png")
+            if os.path.exists(legacy):
+                return f"/static/images/generated/{user_slug}/{lookup_day}_{meal_suffix}.png"
+            return None
 
         # Load Food objects by id (these are safe to query)
         breakfast = Food.objects.filter(pk=plan_vals.get('breakfast_id')).first() if plan_vals.get('breakfast_id') else None
@@ -292,40 +309,31 @@ def generate_and_save_meals(request):
     day = datetime.date.today().isoformat()
     images = {}
     try:
-        # ensure user's image directory exists
+        # ensure user's image directory exists under app static (backwards-compat)
         base_dir = os.path.dirname(os.path.abspath(__file__))
         images_folder = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
         os.makedirs(images_folder, exist_ok=True)
 
-        # Helper to find the most recent timestamped image for a given meal.
+        # also ensure MEDIA location exists if configured
+        if getattr(settings, 'MEDIA_ROOT', None):
+            media_images_folder = os.path.join(settings.MEDIA_ROOT, 'images', 'generated', user_slug)
+            os.makedirs(media_images_folder, exist_ok=True)
 
-
-        def image_url_if_exists_for_meal(meal_suffix):
-            # meal_suffix expected like 'breakfast' or 'lunch' or 'dinner'
-            pattern = os.path.join(images_folder, f"{day}_*_{meal_suffix}.png")
-            matches = glob.glob(pattern)
-            if not matches:
-                # fallback to previous non-timestamped name
-                legacy = os.path.join(images_folder, f"{day}_{meal_suffix}.png")
-                if os.path.exists(legacy):
-                    return f"/static/images/generated/{user_slug}/{day}_{meal_suffix}.png"
-                return None
-            # pick the most recently modified file
-            latest = max(matches, key=os.path.getmtime)
-            fname = os.path.basename(latest)
-            return f"/static/images/generated/{user_slug}/{fname}"
+        # generate images and let generate_image decide whether to save to MEDIA or static
         if breakfast:
             prompt = f"{breakfast.name}: {breakfast.ingredients}. {breakfast.description}"
             img_rel = f"images/generated/{user_slug}/{day}_{ts}_breakfast.png"
             images['breakfast_img'] = generate_image(prompt, output_path=img_rel)
         else:
             images['breakfast_img'] = None
+
         if lunch:
             prompt = f"{lunch.name}: {lunch.ingredients}. {lunch.description}"
             img_rel = f"images/generated/{user_slug}/{day}_{ts}_lunch.png"
             images['lunch_img'] = generate_image(prompt, output_path=img_rel)
         else:
             images['lunch_img'] = None
+
         if dinner:
             prompt = f"{dinner.name}: {dinner.ingredients}. {dinner.description}"
             img_rel = f"images/generated/{user_slug}/{day}_{ts}_dinner.png"

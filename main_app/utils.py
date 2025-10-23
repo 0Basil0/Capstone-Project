@@ -106,10 +106,13 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
             media_root = None
 
         if media_root:
-            full_output_path = os.path.join(media_root, output_path)
+            # ensure output_path does not start with a leading slash
+            output_path_rel = output_path.lstrip('/\\')
+            full_output_path = os.path.join(media_root, output_path_rel)
         else:
             static_dir = os.path.join(base_dir, 'static')
-            full_output_path = os.path.join(static_dir, output_path)
+            output_path_rel = output_path.lstrip('/\\')
+            full_output_path = os.path.join(static_dir, output_path_rel)
 
         os.makedirs(os.path.dirname(full_output_path), exist_ok=True)
 
@@ -134,7 +137,13 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
 
             # Return URL path suitable for templates: prefer /media/ if we saved to MEDIA_ROOT
             if media_root:
-                return '/media/' + output_path.replace('\\', '/')
+                # return an URL using MEDIA_URL
+                try:
+                    from django.conf import settings as dj_settings
+                    media_url = getattr(dj_settings, 'MEDIA_URL', '/media/')
+                except Exception:
+                    media_url = '/media/'
+                return (media_url + output_path_rel.replace('\\', '/')).replace('//', '/')
             else:
                 # fallback to static path
                 try:
@@ -142,12 +151,12 @@ def generate_image(prompt, output_path="output.png", crop_bottom_px=50):
                     static_root = getattr(settings, 'STATIC_ROOT', None)
                     if static_root:
                         # Also copy into STATIC_ROOT so WhiteNoise can serve it (best-effort)
-                        target_path = os.path.join(static_root, *output_path.replace('\\', '/').split('/'))
+                        target_path = os.path.join(static_root, *output_path_rel.replace('\\', '/').split('/'))
                         os.makedirs(os.path.dirname(target_path), exist_ok=True)
                         cropped_img.save(target_path)
                 except Exception:
                     pass
-                return '/static/' + output_path.replace('\\', '/')
+                return '/static/' + output_path_rel.replace('\\', '/')
         return None
     except Exception:
         return None
