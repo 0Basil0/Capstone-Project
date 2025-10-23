@@ -1,6 +1,7 @@
-{% load static %}
+{% load static i18n %}
+{% get_current_language as CURRENT_LANGUAGE %}
 <!doctype html>
-<html lang="en">
+<html lang="{{ CURRENT_LANGUAGE }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +13,7 @@
 
         {% block extra_head %}{% endblock %}
     </head>
-    <body class="bg-light d-flex flex-column min-vh-100 animated-bg">
+    <body class="bg-light d-flex flex-column min-vh-100 animated-bg" dir="{% if CURRENT_LANGUAGE == 'ar' %}rtl{% else %}ltr{% endif %}">
         <!-- Background video (source chosen by page script).
              By default it toggles between BG1 and BG2 on each page load. Pages can
              force a specific video by setting window.FORCE_BG to a static url
@@ -37,9 +38,20 @@
 
                 <div class="collapse navbar-collapse" id="mainNav">
                     <ul class="navbar-nav ms-auto align-items-center">
+                        <li class="nav-item me-2 keep-left">
+                            {# Single-toggle language button: posts to set_language with the opposite language #} 
+                            {% comment %} Use a simple GET toggle so the navbar item is a normal link (renders like others) %} {%  endcomment %}
+
+                                {% if CURRENT_LANGUAGE == 'ar' %}
+                                  <a class="nav-link" href="{% url 'toggle_language' %}?lang=en&next={{ request.path }}">{% trans "English" %}</a>
+                                {% else %}
+                                 <a class="nav-link" href="{% url 'toggle_language' %}?lang=ar&next={{ request.path }}">{% trans "العربية" %}</a>
+                                {% endif %}
+                            
+                        </li>
                         {% if user.is_authenticated %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'allergies' %}">My Allergies</a></li>
-                            <li class="nav-item"><a class="nav-link" href="{% url 'chat' %}">AI Chat</a></li>
+                            <li class="nav-item keep-left"><a class="nav-link" href="{% url 'allergies' %}">{% trans "My Allergies" %}</a></li>
+                            <li class="nav-item keep-left"><a class="nav-link" href="{% url 'chat' %}">{% trans "AI Chat" %}</a></li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     {% comment %} Show avatar or initials in navbar {% endcomment %}
@@ -54,9 +66,9 @@
                                     {% endif %}
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                                    <li><a class="dropdown-item" href="{% url 'home' %}">Dashboard</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'allergies' %}">My Allergies</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'edit_profile' %}">Edit profile</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'home' %}">{% trans "Dashboard" %}</a></li>
+                                    <li class="keep-left"><a class="dropdown-item" href="{% url 'allergies' %}">{% trans "My Allergies" %}</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'edit_profile' %}">{% trans "Edit profile" %}</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form method="post" action="{% url 'logout' %}" class="m-0">
@@ -67,8 +79,8 @@
                                 </ul>
                             </li>
                         {% else %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
-                            <li class="nav-item"><a class="nav-link" href="{% url 'signup' %}">Sign Up</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">{% trans "Login" %}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'signup' %}">{% trans "Sign Up" %}</a></li>
                         {% endif %}
                     </ul>
                 </div>

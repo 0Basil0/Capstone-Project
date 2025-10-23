@@ -19,4 +19,5 @@ urlpatterns = [
     path("allergies/<int:pk>/delete/", views.delete_allergy, name="delete_allergy"),
     path("allergies/<int:pk>/edit/", views.edit_allergy, name="edit_allergy"),
     path('accounts/password_reset/', auth_views.PasswordResetView.as_view(html_email_template_name='registration/password_reset_email.html',), name='password_reset',),
+    path('toggle-lang/', views.toggle_language, name='toggle_language'),
 ]

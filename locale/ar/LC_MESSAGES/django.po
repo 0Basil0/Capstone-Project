@@ -1,0 +1,205 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Capstone-Project\n"
+"PO-Revision-Date: 2025-10-23 00:00+0000\n"
+"Last-Translator: You <you@example.com>\n"
+"Language-Team: Arabic\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: main_app/templates/home.html:3
+msgid "Home"
+msgstr "الصفحة الرئيسية"
+
+#: main_app/templates/home.html:11
+msgid "Today's Meal Planner"
+msgstr "مُنَظِّم الوجبات لليوم"
+
+#: main_app/templates/home.html:12
+msgid "Click the button to generate AI-powered suggestions for today's meals (Breakfast, Lunch, Dinner). Resulting ingredients/description are saved to your account."
+msgstr "اضغط الزر لإنشاء اقتراحات مدعومة بالذكاء الاصطناعي لوجبات اليوم (الإفطار، الغداء، العشاء). سيتم حفظ المكونات والوصف في حسابك."
+
+#: main_app/templates/home.html:27
+msgid "Breakfast"
+msgstr "الإفطار"
+
+#: main_app/templates/home.html:40
+msgid "Lunch"
+msgstr "الغداء"
+
+#: main_app/templates/home.html:53
+msgid "Dinner"
+msgstr "العشاء"
+
+#: main_app/templates/home.html:70
+msgid "Meal details"
+msgstr "تفاصيل الوجبة"
+
+#: main_app/templates/home.html:74
+msgid "Ingredients:"
+msgstr "المكونات:"
+
+#: main_app/templates/home.html:80
+msgid "Description:"
+msgstr "الوصف:"
+
+#: main_app/templates/home.html:86
+msgid "Close"
+msgstr "إغلاق"
+
+#: main_app/templates/home.html:96
+msgid "Generate today's plan"
+msgstr "إنشاء خطة اليوم"
+
+#: main_app/templates/home.html:97
+msgid "Meal suggestions are AI-generated and saved to your account."
+msgstr "اقتراحات الوجبات مولَّدة بواسطة الذكاء الاصطناعي وسيتم حفظها في حسابك."
+
+# auth templates
+#: main_app/templates/registration/login.html:6
+msgid "Welcome back"
+msgstr "مرحبًا بعودتك"
+
+#: main_app/templates/registration/login.html:7
+msgid "Sign in to continue to NutriGuard"
+msgstr "سجّل الدخول للمتابعة إلى NutriGuard"
+
+#: main_app/templates/registration/login.html:22
+msgid "Sign In"
+msgstr "تسجيل الدخول"
+
+#: main_app/templates/registration/login.html:23
+msgid "Create Account"
+msgstr "إنشاء حساب"
+
+#: main_app/templates/registration/login.html:28
+msgid "Forgot password?"
+msgstr "هل نسيت كلمة المرور؟"
+
+#: main_app/templates/registration/signup.html:6
+msgid "Create an Account"
+msgstr "إنشاء حساب"
+
+#: main_app/templates/registration/signup.html:7
+msgid "Join NutriGuard — protect your meals from allergens"
+msgstr "انضم إلى NutriGuard — احمِ وجباتك من مسببات الحساسية"
+
+#: main_app/templates/registration/signup.html:41
+msgid "Back to Sign In"
+msgstr "العودة لتسجيل الدخول"
+
+# chat template
+#: main_app/templates/chat_form.html:3
+msgid "AI Chat"
+msgstr "دردشة الذكاء الاصطناعي"
+
+#: main_app/templates/chat_form.html:12
+msgid "Conversations"
+msgstr "المحادثات"
+
+#: main_app/templates/chat_form.html:13
+msgid "New Chat"
+msgstr "محادثة جديدة"
+
+#: main_app/templates/chat_form.html:35
+msgid "No conversations yet. Click \"New Chat\" to start."
+msgstr "لا توجد محادثات بعد. اضغط \"محادثة جديدة\" للبدء."
+
+#: main_app/templates/chat_form.html:67
+msgid "Type your question..."
+msgstr "اكتب سؤالك..."
+
+#: main_app/templates/chat_form.html:68
+msgid "Send"
+msgstr "إرسال"
+
+#: main_app/templates/chat_form.html:69
+msgid "Delete"
+msgstr "حذف"
+
+#: main_app/templates/chat_form.html:121
+msgid "Delete this conversation?"
+msgstr "هل تريد حذف هذه المحادثة؟"
+
+#: main_app/templates/chat_form.html:122
+msgid "Error:"
+msgstr "خطأ:"
+
+# navbar
+#: main_app/templates/base.html:62
+msgid "My Allergies"
+msgstr "الحساسيات"
+
+#: main_app/templates/base.html:63
+msgid "AI Chat"
+msgstr "دردشة الذكاء الاصطناعي"
+
+# language short label (AR) - keep as-is but translate tooltip via title if needed
+msgid "AR"
+msgstr "AR"
+
+# Profile / form labels
+msgid "Edit Profile"
+msgstr "تعديل الملف"
+
+msgid "First name"
+msgstr "الاسم الأول"
+
+msgid "Last name"
+msgstr "اسم العائلة"
+
+msgid "Age"
+msgstr "العمر"
+
+msgid "Avatar"
+msgstr "الصورة"
+
+msgid "Cancel"
+msgstr "إلغاء"
+
+msgid "Save"
+msgstr "حفظ"
+
+# Navbar / auth
+msgid "Edit profile"
+msgstr "تعديل الملف"
+
+msgid "Login"
+msgstr "تسجيل الدخول"
+
+msgid "Sign Up"
+msgstr "إنشاء حساب"
+
+# Allergies page
+msgid "List your allergies (comma-separated):"
+msgstr "أدرج حساسياتك مفصولة بفواصل:"
+
+msgid "Your saved allergies"
+msgstr "الحساسيات المحفوظة"
+
+msgid "Edit"
+msgstr "تعديل"
+
+msgid "Delete"
+msgstr "حذف"
+
+msgid "Delete this allergy?"
+msgstr "هل تريد حذف هذه الحساسية؟"
+
+msgid "Could not delete allergy"
+msgstr "تعذر حذف الحساسية"
+
+msgid "An error occurred"
+msgstr "حدث خطأ"
+
+msgid "No allergies saved yet."
+msgstr "لا توجد حساسيات محفوظة بعد."
+
+# Language labels
+msgid "English"
+msgstr "English"
+
+msgid "العربية"
+msgstr "العربية"

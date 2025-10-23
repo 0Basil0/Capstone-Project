@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.urls import reverse_lazy
 from django.views.generic import ListView,  CreateView
 from django.contrib.auth.decorators import login_required
@@ -21,7 +22,8 @@ import glob
 import re
 from django.db import connection, transaction, DatabaseError
 from django.conf import settings
- 
+from django.utils.translation import get_language
+from urllib.parse import urlparse, urlunparse
 
 
 class SignUpView(CreateView):
@@ -450,13 +452,21 @@ def delete_allergy(request, pk):
                     'DELETE FROM main_app_allergy WHERE id = %s AND user_id = %s',
                     [allergy.id, request.user.id]
                 )
+        # If this request came from fetch/ajax, return JSON so the client
+        # doesn't follow redirects. Clients send X-Requested-With: XMLHttpRequest.
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'deleted': True})
         return redirect('allergies')
     except DatabaseError as e:
         # If SQL fails, fall back to ORM delete (this may still raise the original ProgrammingError)
         try:
             allergy.delete()
         except Exception as e2:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({"error": str(e2)}, status=400)
             return JsonResponse({"error": str(e2)}, status=400)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'deleted': True})
         return redirect('allergies')
 
 
@@ -478,3 +488,72 @@ def edit_allergy(request, pk):
     qs = Allergy.objects.filter(user=request.user)
     return render(request, 'allergies_form.html', {'allergies': qs, 'allergy': allergy})
 
+def toggle_language(request):
+    """Simple GET-based language toggle. Accepts `?lang=xx` and optional `?next=` to redirect back.
+    Sets the language cookie and redirects to the `next` URL or referrer.
+    """
+    lang = request.GET.get('lang')
+    if not lang:
+        # flip based on current active language
+        current = get_language() or 'en'
+        lang = 'ar' if not current.startswith('ar') else 'en'
+    next_url = request.GET.get('next') or request.META.get('HTTP_REFERER') or reverse('home')
+
+    # If next_url is absolute, preserve scheme/netloc. We'll operate on the path
+    # and add/remove the language prefix ourselves because translate_url isn't
+    # available in this environment's Django version.
+    parsed = urlparse(next_url)
+    path = parsed.path or '/'
+
+    def _translate_path(path, target_lang):
+        """Simple translation of a path by adding or removing the language prefix.
+
+        This assumes URL patterns use i18n_patterns with a two-letter prefix like
+        '/ar/'. It's intentionally minimal: it doesn't validate the path against
+        URLconf, it only ensures the language segment is present or absent.
+        """
+        # normalize leading/trailing
+        if not path.startswith('/'):
+            path = '/' + path
+        # list of language codes we support (from settings.LANGUAGES)
+        supported = [c for c, _ in getattr(settings, 'LANGUAGES', [('en','English'), ('ar','Arabic')])]
+
+        parts = path.split('/')
+        # parts[0] == '' because path starts with '/'
+        if len(parts) > 1 and parts[1] in supported:
+            # path already has a language prefix
+            current_pref = parts[1]
+            if target_lang == current_pref:
+                return path
+            # replace prefix
+            parts[1] = target_lang
+            return '/'.join(parts) or '/'
+        else:
+            # no language prefix; if target is default language, return unchanged
+            default = getattr(settings, 'LANGUAGE_CODE', 'en')[:2]
+            if target_lang == default:
+                return path
+            # add prefix
+            # ensure we avoid double slashes
+            return '/' + target_lang + (path if path != '/' else '')
+
+    translated_path = _translate_path(path, lang) or path
+
+    if parsed.netloc:
+        # Rebuild absolute URL with the translated path
+        scheme = parsed.scheme or request.scheme
+        netloc = parsed.netloc
+        new_url = urlunparse((scheme, netloc, translated_path, parsed.params, parsed.query, parsed.fragment))
+    else:
+        # Relative URL: attach translated path and preserve query/fragment
+        new_url = translated_path
+        if parsed.query:
+            new_url = new_url + '?' + parsed.query
+        if parsed.fragment:
+            new_url = new_url + '#' + parsed.fragment
+
+    response = redirect(new_url)
+    cookie_name = getattr(settings, 'LANGUAGE_COOKIE_NAME', 'django_language')
+    # Use a session cookie (no max_age) so browser keeps preference until cleared
+    response.set_cookie(cookie_name, lang)
+    return response

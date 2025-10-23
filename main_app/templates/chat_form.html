@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
-{% block title %}AI Chat{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "AI Chat" %}{% endblock %}
 {% block content %}
 <div class="container fade-in-up ">
 <div class="row">
   <div class="col-md-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <h5 class="mb-0">Conversations</h5>
-      <button class="btn btn-sm btn-primary" id="newChatBtn">New Chat</button>
+  <h5 class="mb-0">{% trans "Conversations" %}</h5>
+  <button class="btn btn-sm btn-primary" id="newChatBtn">{% trans "New Chat" %}</button>
     </div>
 
     <!-- Avatar display (uploads moved to Edit profile page) -->
@@ -31,7 +32,7 @@
         </a>
         
       {% empty %}
-        <div class="text-muted small">No conversations yet. Click "New Chat" to start.</div>
+        <div class="text-muted small">{% trans "No conversations yet. Click \"New Chat\" to start." %}</div>
       {% endfor %}
     </div>
   </div>
@@ -44,19 +45,29 @@
 
       <div class="card-footer chat-footer">
         <div class="input-group">
-          <input type="text" id="userMessage" class="form-control" placeholder="Type your question...">
-          <button class="btn btn-success" id="sendBtn">Send</button>
-          <button class="btn btn-outline-danger" id="deleteBtn">Delete</button>
+          <input type="text" id="userMessage" class="form-control" placeholder="{% trans "Type your question..." %}">
+          <button class="btn btn-success" id="sendBtn">{% trans "Send" %}</button>
+          <button class="btn btn-outline-danger" id="deleteBtn">{% trans "Delete" %}</button>
         </div>
       </div>
     </div>
   </div>
+<script>
+// JS translations for dialog text
+const I18N = {
+  delete_confirm: '{% trans "Delete this conversation?" %}',
+  error_label: '{% trans "Error:" %}'
+};
+
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- DOMPurify for sanitizing rendered HTML from markdown to prevent XSS -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
 
 <script>
-const csrfToken = '{{ csrf_token }}';
+function getCookie(name) { let v = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)'); return v ? v.pop() : ''; }
+const csrfToken = getCookie('csrftoken');
 const profileAvatarUrl = {% if profile and profile.avatar %}'{{ profile.avatar.url }}'{% else %}null{% endif %};
 const profileInitials = {% if profile %}'{{ profile.initials }}'{% else %}'{{ user.username|slice:":1"|upper }}'{% endif %};
 let currentChatId = null;
@@ -82,7 +93,7 @@ function attachChatItemHandler(el) {
 async function selectChat(sessionId) {
   currentChatId = sessionId;
   // fetch chat details for session
-  const res = await fetch(`{% url 'chat_get' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', sessionId));
+  const res = await fetch(`{% url 'chat_get' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', sessionId), { credentials: 'same-origin' });
   const data = await res.json();
   const messages = document.getElementById('messages');
   messages.innerHTML = '';
@@ -91,9 +102,9 @@ async function selectChat(sessionId) {
       // user message bubble with avatar/initials
       const userAvatarHtml = profileAvatarUrl ? (`<img src="${profileAvatarUrl}" class="rounded-circle" width="32" height="32" style="object-fit:cover;margin-right:8px;">`) : (`<div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;font-weight:600;margin-right:8px;">${profileInitials}</div>`);
       // user bubble
-      messages.innerHTML += `<div class="msg-row user"><div class="chat-bubble user">${escapeHtml(m.user_message)}</div><div class="meta">${userAvatarHtml}</div></div>`;
+      messages.innerHTML += `<div class="msg-row user"><div class="chat-bubble user">${renderMessage(m.user_message)}</div><div class="meta">${userAvatarHtml}</div></div>`;
       // ai bubble
-      messages.innerHTML += `<div class="msg-row"><div class="meta"></div><div class="chat-bubble ai">${marked.parse(escapeHtml(m.bot_response))}</div></div>`;
+      messages.innerHTML += `<div class="msg-row"><div class="meta"></div><div class="chat-bubble ai">${renderMessage(m.bot_response)}</div></div>`;
     }
   scrollChatToBottom();
 }
@@ -106,7 +117,7 @@ async function sendMessage() {
   // show optimistic user message
   const messages = document.getElementById('messages');
   const userAvatarHtml = profileAvatarUrl ? (`<img src="${profileAvatarUrl}" class="rounded-circle" width="32" height="32" style="object-fit:cover;margin-right:8px;">`) : (`<div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;font-weight:600;margin-right:8px;">${profileInitials}</div>`);
-  messages.innerHTML += `<div class="msg-row user"><div class="chat-bubble user">${escapeHtml(message)}</div><div class="meta">${userAvatarHtml}</div></div>`;
+  messages.innerHTML += `<div class="msg-row user"><div class="chat-bubble user">${renderMessage(message)}</div><div class="meta">${userAvatarHtml}</div></div>`;
   scrollChatToBottom();
 
   const res = await fetch("{% url 'chatbot_api' %}", {
@@ -121,7 +132,7 @@ async function sendMessage() {
   if (data.error) {
     messages.innerHTML += `<div class="text-danger"><strong>Error:</strong> ${escapeHtml(data.error)}</div>`;
   } else {
-  messages.innerHTML += `<div class="msg-row"><div class="meta"></div><div class="chat-bubble ai">${marked.parse(escapeHtml(data.reply))}</div></div>`;
+  messages.innerHTML += `<div class="msg-row"><div class="meta"></div><div class="chat-bubble ai">${renderMessage(data.reply)}</div></div>`;
     // set or update the active session id
     if (data.session_id) {
       // Set current session
@@ -200,7 +211,7 @@ async function deleteCurrentChat() {
   if (!currentChatId) return;
   if (!confirm('Delete this conversation?')) return;
   const res = await fetch(`{% url 'chat_delete' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', `${currentChatId}`), {
-    method: 'POST', headers: {'X-CSRFToken': csrfToken}
+    method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrfToken}
   });
   const data = await res.json();
   if (data.deleted) {
@@ -225,6 +236,36 @@ function scrollChatToBottom() {
 function escapeHtml(text) {
   var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
   return String(text).replace(/[&<>\"']/g, function(m) { return map[m]; });
+}
+
+function renderMessage(text) {
+  if (text === null || text === undefined) return '';
+  try {
+    // Prefer markdown rendering when available, then sanitize the HTML.
+    if (typeof marked !== 'undefined') {
+      try {
+        const mdHtml = marked.parse(String(text || ''));
+        if (typeof DOMPurify !== 'undefined') {
+          try {
+            return DOMPurify.sanitize(mdHtml);
+          } catch (e) {
+            // fall back to escaped text
+            return escapeHtml(String(text)).replace(/\n/g, '<br>');
+          }
+        }
+        // No DOMPurify: be conservative and escape the produced HTML
+        return escapeHtml(mdHtml).replace(/\n/g, '<br>');
+      } catch (e) {
+        // If marked fails, fall back to escaped text
+        return escapeHtml(String(text)).replace(/\n/g, '<br>');
+      }
+    }
+
+    // marked not available: just escape and preserve newlines
+    return escapeHtml(String(text)).replace(/\n/g, '<br>');
+  } catch (e) {
+    return escapeHtml(String(text)).replace(/\n/g, '<br>');
+  }
 }
 
 document.getElementById('sendBtn').addEventListener('click', sendMessage);

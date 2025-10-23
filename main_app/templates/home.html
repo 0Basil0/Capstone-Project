@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
-{% block title %}Home{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Home" %}{% endblock %}
 
 {% block content %}
 <!-- page-wide backgrounds for breakfast (left), lunch (center), dinner (right) -->
@@ -10,13 +11,13 @@
 </div>
 <div class="text-center mb-4">
     <div class="home-hero-panel mx-auto p-4 rounded-3" style="max-width:900px; background: rgba(0,0,0,0.55);">
-        <h1 class="display-6 text-white mb-2">Today's Meal Planner</h1>
-        <p class="text-light mb-0">Click the button to generate AI-powered suggestions for todays meals (Breakfast, Lunch, Dinner). Resulting ingredients/description are saved to your account.</p>
+    <h1 class="display-6 text-white mb-2">{% trans "Today's Meal Planner" %}</h1>
+    <p class="text-light mb-0">{% trans "Click the button to generate AI-powered suggestions for today's meals (Breakfast, Lunch, Dinner). Resulting ingredients/description are saved to your account." %}</p>
     </div>
 </div>  
 <div class="d-flex justify-content-center gap-4 mb-4 meal-circles">
     <div class="meal-circle" id="breakfast">
-        <div class="meal-label">Breakfast</div>
+    <div class="meal-label">{% trans "Breakfast" %}</div>
         <button class="close-expanded" aria-label="Close">×</button>
         <div class="meal-name" id="breakfast-name">{% if initial_plan %}{{ initial_plan.breakfast.name }}{% else %}—{% endif %}</div>
         <div class="meal-details" aria-hidden="true">
@@ -25,7 +26,7 @@
         </div>
     </div>
     <div class="meal-circle" id="lunch">
-        <div class="meal-label">Lunch</div>
+    <div class="meal-label">{% trans "Lunch" %}</div>
         <button class="close-expanded" aria-label="Close">×</button>
         <div class="meal-name" id="lunch-name">{% if initial_plan %}{{ initial_plan.lunch.name }}{% else %}—{% endif %}</div>
         <div class="meal-details" aria-hidden="true">
@@ -34,7 +35,7 @@
         </div>
     </div>
     <div class="meal-circle" id="dinner">
-        <div class="meal-label">Dinner</div>
+    <div class="meal-label">{% trans "Dinner" %}</div>
         <button class="close-expanded" aria-label="Close">×</button>
         <div class="meal-name" id="dinner-name">{% if initial_plan %}{{ initial_plan.dinner.name }}{% else %}—{% endif %}</div>
         <div class="meal-details" aria-hidden="true">
@@ -49,26 +50,26 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="mealModalLabel">Meal details</h5>
+                <h5 class="modal-title" id="mealModalLabel">{% trans "Meal details" %}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Ingredients:</strong></p>
+                <p><strong>{% trans "Ingredients:" %}</strong></p>
                 <p id="meal-ingredients" class="small text-muted"></p>
                 <hr>
-                <p><strong>Description:</strong></p>
+                <p><strong>{% trans "Description:" %}</strong></p>
                 <p id="meal-description" class="small"></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
             </div>
         </div>
     </div>
 </div>
 
 <div class="text-center mb-5">
-    <button id="generateBtn" class="btn btn-lg" style="background:#28a745; color:#fff; border:0; box-shadow:0 4px 10px rgba(0,0,0,0.25);">Generate today's plan</button>
-    <div class="home-hero-panel mx-auto p-4 rounded-3 small text-light text-white" style="max-width:500px; background: rgba(0,0,0,0.55);">Meal suggestions are AI-generated and saved to your account.</div>
+    <button id="generateBtn" class="btn btn-lg" style="background:#28a745; color:#fff; border:0; box-shadow:0 4px 10px rgba(0,0,0,0.25);">{% trans "Generate today's plan" %}</button>
+    <div class="home-hero-panel mx-auto p-4 rounded-3 small text-light text-white" style="max-width:500px; background: rgba(0,0,0,0.55);">{% trans "Meal suggestions are AI-generated and saved to your account." %}</div>
 </div>
 
 <script>

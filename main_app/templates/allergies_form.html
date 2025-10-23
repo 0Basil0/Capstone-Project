@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
-{% block title %}My Allergies{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "My Allergies" %}{% endblock %}
 
 {% block content %}
     <div class="page-viewport">
         
                 <div class="page-card fade-in-up card chat-card">
                     <div class="card-body">
-                        <h2 class="mb-4 ">My Allergies</h2>
+                        <h2 class="mb-4 ">{% trans "My Allergies" %}</h2>
     {% if allergy %}
         <h5>Edit allergy</h5>
         <form method="post" class="mb-3" action="{% url 'edit_allergy' allergy.pk %}">
@@ -27,7 +28,7 @@
         <form method="post" class="mb-3" action="{% url 'add_allergy' %}">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="allergies" class="form-label">List your allergies (comma-separated):</label>
+                <label for="allergies" class="form-label">{% trans "List your allergies (comma-separated):" %}</label>
                 <input type="text" class="form-control" id="allergies" name="allergies" placeholder="e.g. peanuts, shellfish, gluten">
             </div>
             <button type="submit" class="btn btn-primary">Save Allergies</button>
@@ -45,11 +46,11 @@
                     const editLink = document.createElement('a');
                     editLink.className = 'btn btn-sm btn-outline-light me-2';
                     editLink.id = 'allergyEditLink';
-                    editLink.textContent = 'Edit';
+                    editLink.textContent = '{% trans "Edit" %}';
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'btn btn-sm btn-danger';
                     deleteBtn.id = 'allergyDeleteBtn';
-                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.textContent = '{% trans "Delete" %}';
 
                     // insert controls into panel header if panel exists
                     if (panel) {
@@ -96,19 +97,43 @@
                             if (editLink) editLink.href = `/allergies/${aid}/edit/`;
                             if (deleteBtn) {
                                 deleteBtn.onclick = async function(){
-                                    if (!confirm('Delete this allergy?')) return;
+                                    if (!confirm('{% trans "Delete this allergy?" %}')) return;
                                     try {
                                         const csrftoken = getCookie('csrftoken');
-                                        const res = await fetch(`/allergies/${aid}/delete/`, { method: 'POST', headers: {'X-CSRFToken': csrftoken} });
+                                        // Build URL that preserves language prefix (i18n_patterns)
+                                        const parts = window.location.pathname.split('/');
+                                        const langCandidate = parts[1];
+                                        const supportedLangs = ['en','ar'];
+                                        const prefix = supportedLangs.includes(langCandidate) ? '/' + langCandidate : '';
+                                        const deleteUrl = `${prefix}/allergies/${aid}/delete/`;
+                                        // ensure same-origin cookies are sent
+                                        const res = await fetch(deleteUrl, { method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest'} });
                                         if (res.ok) {
-                                            el.remove();
-                                            if (panel) panel.style.display = 'none';
+                                            // try to parse JSON (server returns {deleted: true})
+                                            try {
+                                                const j = await res.json();
+                                                if (j && j.deleted) {
+                                                    el.remove();
+                                                    if (panel) panel.style.display = 'none';
+                                                } else {
+                                                    // fallback: remove if response OK
+                                                    el.remove();
+                                                    if (panel) panel.style.display = 'none';
+                                                }
+                                            } catch(e) {
+                                                // non-JSON OK response, still treat as success
+                                                el.remove();
+                                                if (panel) panel.style.display = 'none';
+                                            }
                                         } else {
-                                            alert('Could not delete allergy');
+                                            // try to show server-provided error message
+                                            let msg = '{% trans "Could not delete allergy" %}';
+                                            try { const err = await res.json(); if (err && err.error) msg = err.error; } catch(e){}
+                                            alert(msg + ` (status ${res.status})`);
                                         }
                                     } catch (err) {
                                         console.error(err);
-                                        alert('An error occurred');
+                                        alert('{% trans "An error occurred" %}');
                                     }
                                 };
                             }
@@ -124,12 +149,12 @@
                     });
                 });
             </script>
-        <h4 class="mt-4">Your saved allergies</h4>
+    <h4 class="mt-4">{% trans "Your saved allergies" %}</h4>
         <div class="allergy-circles mt-3">
             {% for a in allergies %}
                 <div class="allergy-circle" data-allergy-id="{{ a.id }}" data-description="{{ a.description|escapejs }}">
                     <div class="label">{{ a.name }}</div>
-                    <div class="sub">Tap to view</div>
+                    <div class="sub">{% trans "Tap to view" %}</div>
                 </div>
             {% endfor %}
             <div class="allergy-main-circle" id="addAllergyBtn">+</div>
@@ -141,7 +166,7 @@
         </div>
 
         {% if allergies|length == 0 %}
-            <div class="text-muted">No allergies saved yet.</div>
+            <div class="text-muted">{% trans "No allergies saved yet." %}</div>
         {% endif %}
             </div>
         </div>
