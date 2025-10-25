@@ -246,31 +246,110 @@ def home(request):
             # remove trailing space + 14-digit timestamp (YYYYMMDDHHMMSS)
             return re.sub(r"\s*\d{14}$", '', name)
 
+        # Build initial_plan including both 'en' and 'ar' values from stored Food rows when available.
+        def make_bilingual_from_food(food_obj):
+            if not food_obj:
+                return {'name': {'en': '', 'ar': ''}, 'image': None, 'ingredients': {'en': '', 'ar': ''}, 'description': {'en': '', 'ar': ''}}
+            name_en = strip_timestamp_suffix(food_obj.name) if food_obj.name else ''
+            name_ar = getattr(food_obj, 'name_ar', '') or ''
+            ings_en = food_obj.ingredients or ''
+            ings_ar = getattr(food_obj, 'ingredients_ar', '') or ''
+            desc_en = food_obj.description or ''
+            desc_ar = getattr(food_obj, 'description_ar', '') or ''
+            return {
+                'name': {'en': name_en, 'ar': name_ar},
+                'image': image_url_if_exists_for_meal('breakfast') if False else None, # placeholder, replaced below
+                'ingredients': {'en': ings_en, 'ar': ings_ar},
+                'description': {'en': desc_en, 'ar': desc_ar},
+            }
+
+        breakfast_bi = make_bilingual_from_food(breakfast)
+        lunch_bi = make_bilingual_from_food(lunch)
+        dinner_bi = make_bilingual_from_food(dinner)
+
+        # set correct images
+        if breakfast:
+            breakfast_bi['image'] = image_url_if_exists_for_meal('breakfast')
+        if lunch:
+            lunch_bi['image'] = image_url_if_exists_for_meal('lunch')
+        if dinner:
+            dinner_bi['image'] = image_url_if_exists_for_meal('dinner')
+
         initial_plan = {
-            'breakfast': {
-                'name': strip_timestamp_suffix(breakfast.name) if breakfast else '',
-                'image': image_url_if_exists_for_meal('breakfast'),
-                'ingredients': breakfast.ingredients if breakfast else '',
-                'description': breakfast.description if breakfast else '',
-            },
-            'lunch': {
-                'name': strip_timestamp_suffix(lunch.name) if lunch else '',
-                'image': image_url_if_exists_for_meal('lunch'),
-                'ingredients': lunch.ingredients if lunch else '',
-                'description': lunch.description if lunch else '',
-            },
-            'dinner': {
-                'name': strip_timestamp_suffix(dinner.name) if dinner else '',
-                'image': image_url_if_exists_for_meal('dinner'),
-                'ingredients': dinner.ingredients if dinner else '',
-                'description': dinner.description if dinner else '',
-            },
+            'breakfast': breakfast_bi,
+            'lunch': lunch_bi,
+            'dinner': dinner_bi,
             'generation_count': 0,
         }
 
     import json
     initial_plan_json = json.dumps(initial_plan) if initial_plan else None
-    return render(request, 'home.html', {'initial_plan': initial_plan, 'initial_plan_json': initial_plan_json})
+    # Build recent food history (last 5 MealPlan entries) so the homepage can show
+    # previously generated meals in a compact history panel.
+    food_history = []
+    try:
+        user_slug = request.user.username
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        media_root = getattr(settings, 'MEDIA_ROOT', None)
+        media_base = os.path.join(media_root, 'images', 'generated', user_slug) if media_root else None
+        static_base = os.path.join(base_dir, 'static', 'images', 'generated', user_slug)
+
+        def image_for(lookup_day, meal_suffix):
+            # search MEDIA first
+            if media_base:
+                pattern = os.path.join(media_base, f"{lookup_day}_*_{meal_suffix}.png")
+                matches = glob.glob(pattern)
+                if matches:
+                    latest = max(matches, key=os.path.getmtime)
+                    fname = os.path.basename(latest)
+                    return os.path.join(settings.MEDIA_URL, 'images', 'generated', user_slug, fname).replace('\\', '/')
+                legacy = os.path.join(media_base, f"{lookup_day}_{meal_suffix}.png")
+                if os.path.exists(legacy):
+                    return os.path.join(settings.MEDIA_URL, 'images', 'generated', user_slug, f"{lookup_day}_{meal_suffix}.png").replace('\\', '/')
+
+            # fallback to app static folder
+            pattern = os.path.join(static_base, f"{lookup_day}_*_{meal_suffix}.png")
+            matches = glob.glob(pattern)
+            if matches:
+                latest = max(matches, key=os.path.getmtime)
+                fname = os.path.basename(latest)
+                return f"/static/images/generated/{user_slug}/{fname}"
+            legacy = os.path.join(static_base, f"{lookup_day}_{meal_suffix}.png")
+            if os.path.exists(legacy):
+                return f"/static/images/generated/{user_slug}/{lookup_day}_{meal_suffix}.png"
+            return None
+
+        recent_plans = MealPlan.objects.filter(user=request.user).order_by('-day')[:5]
+        for p in recent_plans:
+            entry = {
+                'day': p.day,
+                'breakfast': None,
+                'lunch': None,
+                'dinner': None,
+            }
+            if p.breakfast:
+                entry['breakfast'] = {
+                    'id': p.breakfast.id,
+                    'name': {'en': re.sub(r"\s*\d{14}$", '', p.breakfast.name or ''), 'ar': getattr(p.breakfast, 'name_ar', '') or ''},
+                    'image': image_for(p.day, 'breakfast')
+                }
+            if p.lunch:
+                entry['lunch'] = {
+                    'id': p.lunch.id,
+                    'name': {'en': re.sub(r"\s*\d{14}$", '', p.lunch.name or ''), 'ar': getattr(p.lunch, 'name_ar', '') or ''},
+                    'image': image_for(p.day, 'lunch')
+                }
+            if p.dinner:
+                entry['dinner'] = {
+                    'id': p.dinner.id,
+                    'name': {'en': re.sub(r"\s*\d{14}$", '', p.dinner.name or ''), 'ar': getattr(p.dinner, 'name_ar', '') or ''},
+                    'image': image_for(p.day, 'dinner')
+                }
+            food_history.append(entry)
+    except Exception:
+        food_history = []
+
+    return render(request, 'home.html', {'initial_plan': initial_plan, 'initial_plan_json': initial_plan_json, 'food_history': food_history})
 
 
 @login_required
@@ -291,12 +370,73 @@ def generate_and_save_meals(request):
     def create_new_food(obj):
         if not obj:
             return None
-        # Keep the stored/display name clean (no timestamp suffix). The timestamp
-        # will be used only for image filenames.
-        raw_name = obj.get('name','').strip()[:100]
-        ingredients = obj.get('ingredients','')
-        description = obj.get('description','')
-        food = Food.objects.create(name=raw_name, ingredients=ingredients, description=description)
+        # Helper: accept three possible shapes
+        # 1) obj is a dict with keys 'name','ingredients','description' where each value is a string "EN // AR"
+        # 2) obj is a dict with 'en' and 'ar' sub-dicts: {'en': {...}, 'ar': {...}}
+        # 3) legacy single-language dict
+        def split_en_ar(value):
+            # Given a string (or None), return tuple (en, ar)
+            if not value:
+                return ('', '')
+            if isinstance(value, dict):
+                # value may already be {'en':..., 'ar':...}
+                return (value.get('en','') or '', value.get('ar','') or '')
+            s = str(value)
+            # delimiter is '//' possibly with spaces
+            if '//' in s:
+                parts = s.split('//', 1)
+                return (parts[0].strip(), parts[1].strip())
+            return (s.strip(), '')
+
+        name_en = ''
+        name_ar = ''
+        ings_en = ''
+        ings_ar = ''
+        desc_en = ''
+        desc_ar = ''
+
+        # Case: obj has 'en' and 'ar' dictionaries
+        if isinstance(obj, dict) and obj.get('en') and obj.get('ar'):
+            en = obj.get('en')
+            ar = obj.get('ar')
+            # en/ar may be sub-dicts or strings
+            if isinstance(en, dict):
+                name_en = (en.get('name') or '').strip()
+                ings_en = (en.get('ingredients') or '').strip()
+                desc_en = (en.get('description') or '').strip()
+            else:
+                # en could be string containing delimiter for the three fields; unlikely, but handle
+                # best-effort: treat as name
+                name_en = str(en).strip()
+            if isinstance(ar, dict):
+                name_ar = (ar.get('name') or '').strip()
+                ings_ar = (ar.get('ingredients') or '').strip()
+                desc_ar = (ar.get('description') or '').strip()
+            else:
+                name_ar = str(ar).strip()
+        elif isinstance(obj, dict):
+            # obj is likely {'name': 'EN // AR', 'ingredients': 'EN // AR', 'description': 'EN // AR'}
+            name_field = obj.get('name')
+            ings_field = obj.get('ingredients')
+            desc_field = obj.get('description')
+            name_en, name_ar = split_en_ar(name_field)
+            ings_en, ings_ar = split_en_ar(ings_field)
+            desc_en, desc_ar = split_en_ar(desc_field)
+        else:
+            # obj is a string containing combined fields? treat as name only
+            name_en, name_ar = split_en_ar(obj)
+
+        # Keep stored/display name clean (no timestamp suffix). Timestamp used in filenames.
+        raw_name = name_en[:100].strip()
+
+        food = Food.objects.create(
+            name=raw_name,
+            ingredients=ings_en,
+            description=desc_en,
+            name_ar=(name_ar or None),
+            ingredients_ar=(ings_ar or None),
+            description_ar=(desc_ar or None),
+        )
         return food
 
     # Use a timestamp so each generation writes new image files
@@ -363,24 +503,24 @@ def generate_and_save_meals(request):
         'day': day,
         'breakfast': {
             'id': breakfast.id if breakfast else None,
-            'name': breakfast.name if breakfast else '',
+            'name': {'en': breakfast.name if breakfast else '', 'ar': getattr(breakfast, 'name_ar', '') if breakfast else ''},
             'image': images.get('breakfast_img'),
-            'ingredients': breakfast.ingredients if breakfast else '',
-            'description': breakfast.description if breakfast else '',
+            'ingredients': {'en': breakfast.ingredients if breakfast else '', 'ar': getattr(breakfast, 'ingredients_ar', '') if breakfast else ''},
+            'description': {'en': breakfast.description if breakfast else '', 'ar': getattr(breakfast, 'description_ar', '') if breakfast else ''},
         },
         'lunch': {
             'id': lunch.id if lunch else None,
-            'name': lunch.name if lunch else '',
+            'name': {'en': lunch.name if lunch else '', 'ar': getattr(lunch, 'name_ar', '') if lunch else ''},
             'image': images.get('lunch_img'),
-            'ingredients': lunch.ingredients if lunch else '',
-            'description': lunch.description if lunch else '',
+            'ingredients': {'en': lunch.ingredients if lunch else '', 'ar': getattr(lunch, 'ingredients_ar', '') if lunch else ''},
+            'description': {'en': lunch.description if lunch else '', 'ar': getattr(lunch, 'description_ar', '') if lunch else ''},
         },
         'dinner': {
             'id': dinner.id if dinner else None,
-            'name': dinner.name if dinner else '',
+            'name': {'en': dinner.name if dinner else '', 'ar': getattr(dinner, 'name_ar', '') if dinner else ''},
             'image': images.get('dinner_img'),
-            'ingredients': dinner.ingredients if dinner else '',
-            'description': dinner.description if dinner else '',
+            'ingredients': {'en': dinner.ingredients if dinner else '', 'ar': getattr(dinner, 'ingredients_ar', '') if dinner else ''},
+            'description': {'en': dinner.description if dinner else '', 'ar': getattr(dinner, 'description_ar', '') if dinner else ''},
         },
     })
         

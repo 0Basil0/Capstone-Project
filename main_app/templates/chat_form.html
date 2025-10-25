@@ -6,7 +6,7 @@
 <div class="row">
   <div class="col-md-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
-  <h5 class="mb-0">{% trans "Conversations" %}</h5>
+  <h5 class="font-weight-bold green_withshadow">{% trans "Conversations" %}</h5>
   <button class="btn btn-sm btn-primary" id="newChatBtn">{% trans "New Chat" %}</button>
     </div>
 
@@ -95,10 +95,12 @@ async function selectChat(sessionId) {
   // fetch chat details for session
   const res = await fetch(`{% url 'chat_get' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', sessionId), { credentials: 'same-origin' });
   const data = await res.json();
+  
   const messages = document.getElementById('messages');
   messages.innerHTML = '';
   // server returns the full message list for the session
     for (const m of data.messages) {
+      
       // user message bubble with avatar/initials
       const userAvatarHtml = profileAvatarUrl ? (`<img src="${profileAvatarUrl}" class="rounded-circle" width="32" height="32" style="object-fit:cover;margin-right:8px;">`) : (`<div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;font-weight:600;margin-right:8px;">${profileInitials}</div>`);
       // user bubble
@@ -238,33 +240,77 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>\"']/g, function(m) { return map[m]; });
 }
 
-function renderMessage(text) {
+// Prefer marked + DOMPurify, but fall back to a safe inline-processor that
+// preserves code spans/blocks and converts **bold**/*italic* when needed.
+function renderMessage(text){
   if (text === null || text === undefined) return '';
-  try {
-    // Prefer markdown rendering when available, then sanitize the HTML.
-    if (typeof marked !== 'undefined') {
-      try {
-        const mdHtml = marked.parse(String(text || ''));
-        if (typeof DOMPurify !== 'undefined') {
-          try {
-            return DOMPurify.sanitize(mdHtml);
-          } catch (e) {
-            // fall back to escaped text
-            return escapeHtml(String(text)).replace(/\n/g, '<br>');
+  try{
+    const raw = String(text||'');
+    // Internal fallback processor: preserves code spans/blocks and converts **bold**/*italic*
+    function fallbackProcess(input){
+      try{
+        // Remove a wider set of invisible/formatting characters that appear in
+        // RTL/Arabic text and can break regex-based markdown parsing.
+        const rawNorm = input.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\u061C\u200B\u200C\u200D\uFEFF\u2060]/g,'');
+        const tokens = [];
+        let withPlaceholders = rawNorm.replace(/```([\s\S]*?)```/g, function(_, code){
+          const id = tokens.length; tokens.push('<pre><code>'+escapeHtml(code)+'</code></pre>'); return '@@CODE'+id+'@@';
+        });
+        withPlaceholders = withPlaceholders.replace(/`([^`]+?)`/g, function(_, code){ const id = tokens.length; tokens.push('<code>'+escapeHtml(code)+'</code>'); return '@@CODE'+id+'@@'; });
+        const parts = withPlaceholders.split(/(@@CODE\d+@@)/g);
+        for(let i=0;i<parts.length;i++){ if(!/^@@CODE\d+@@$/.test(parts[i])) parts[i]=escapeHtml(parts[i]); }
+        let esc = parts.join('');
+        // Use [\s\S] to allow matching across newlines and be more robust for emphasis.
+        esc = esc.replace(/\*\*([\s\S]+?)\*\*/g,'<strong>$1</strong>');
+        esc = esc.replace(/\*([\s\S]+?)\*/g,'<em>$1</em>');
+
+        // Handle block-level markdown (headings and lists) on the escaped text.
+        const lines = esc.split(/\r?\n/);
+        const out = [];
+        for (let i = 0; i < lines.length; ) {
+          const line = lines[i];
+          // Headings: #, ##, ### ... up to 6
+          const h = line.match(/^(#{1,6})\s+(.*)$/);
+          if (h) {
+            const level = Math.min(h[1].length, 6);
+            out.push(`<h${level}>${h[2]}</h${level}>`);
+            i++;
+            continue;
           }
+
+          // Lists: gather consecutive list lines into a single <ul> or <ol>
+          const ulMatch = line.match(/^\s*([-\*])\s+(.*)$/);
+          const olMatch = line.match(/^\s*(\d+)\.\s+(.*)$/);
+          if (ulMatch || olMatch) {
+            const isOrdered = !!olMatch;
+            const items = [];
+            while (i < lines.length && (lines[i].match(/^\s*([-\*])\s+/) || lines[i].match(/^\s*\d+\.\s+/))) {
+              const liLine = lines[i].replace(/^\s*([-\*]|\d+\.)\s+/, '');
+              items.push(`<li>${liLine}</li>`);
+              i++;
+            }
+            out.push(isOrdered ? `<ol>${items.join('')}</ol>` : `<ul>${items.join('')}</ul>`);
+            continue;
+          }
+
+          // Regular line
+          out.push(line);
+          i++;
         }
-        // No DOMPurify: be conservative and escape the produced HTML
-        return escapeHtml(mdHtml).replace(/\n/g, '<br>');
-      } catch (e) {
-        // If marked fails, fall back to escaped text
-        return escapeHtml(String(text)).replace(/\n/g, '<br>');
-      }
+
+        const restored = out.join('\n').replace(/@@CODE(\d+)@@/g,function(_, idx){ return tokens[Number(idx)]; });
+        const finalHtml = restored.replace(/\n/g,'<br>');
+        return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(finalHtml) : finalHtml;
+      }catch(e){ return escapeHtml(String(input)).replace(/\n/g,'<br>'); }
     }
 
-    // marked not available: just escape and preserve newlines
-    return escapeHtml(String(text)).replace(/\n/g, '<br>');
-  } catch (e) {
-    return escapeHtml(String(text)).replace(/\n/g, '<br>');
+    // Always use our internal fallback processor which covers bold/italic,
+    // inline code and fenced code blocks and tolerates RTL invisible chars.
+    // If marked is available it may be used for richer markdown in the future,
+    // but fallback guarantees the essential formatting works even if CDN fails.
+    return fallbackProcess(raw);
+  }catch(e){
+    return escapeHtml(String(text)).replace(/\n/g,'<br>');
   }
 }
 

@@ -84,6 +84,22 @@ a:hover {
     font-size: 1.5rem;
     letter-spacing: 0.5px;
 }
+
+/* Make navbar container a positioning context for the history toggle */
+.navbar .container { position: relative; }
+
+/* When the toggle is inside the navbar, position it near the brand instead of fixed */
+.navbar .history-toggle {
+    position: absolute;
+    left: 300px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 600;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: none;
+}
+[dir="rtl"] .navbar .history-toggle { left: auto; right: 300px; }
 .nav-link {
     color: #f1f1f1 !important;
     font-weight: 500;
@@ -234,7 +250,7 @@ footer {
     flex-direction: column;
 }
 .allergy-circle .label { font-size: 0.85rem; font-weight:700 }
-.allergy-circle .sub { font-size: 0.65rem; opacity:0.95 }
+.allergy-circle .sub { font-size: 0.65rem; opacity:0.95; }
 .allergy-circle:hover { transform: translateY(-6px); background: rgba(255,255,255,0.12); }
 
 .allergy-circle.active {
@@ -346,7 +362,7 @@ footer {
     width: 1100px;
     max-width: 96%;
     border-radius: 12px;
-    background: rgba(255,255,255,0.94);
+    background: rgba(0,0,0,0.12);
     box-shadow: 0 18px 50px rgba(0,0,0,0.12);
     border: 1px solid rgba(0,0,0,0.04);
 }
@@ -371,8 +387,13 @@ footer {
 
 /* Make page-card use chat-card look when combined (used for allergies page) */
 .page-card.chat-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.03);
+    /* Darker, higher-contrast background for allergy/chat pages so text is readable */
+    background: rgba(0,0,0,0.20);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #ffffff;
+}
+.page-card.chat-card .card-body {
+    color: #ffffff;
 }
 
 /* Keep forms readable but less stark on these pages */
@@ -483,6 +504,21 @@ footer {
     text-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
 
+/* Hide the details (name/ingredients/description) inside the circle by default
+   so only the meal label is visible. When expanded, show the details. */
+.meal-circle .meal-details {
+    display: none;
+    opacity: 0;
+    transition: opacity 180ms ease, transform 180ms ease;
+    transform: translateY(6px);
+    width: 86%;
+}
+.meal-circle.expanded .meal-details {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* Expanded circle animation */
 .meal-circle.expanded {
     position: fixed !important;
@@ -526,12 +562,12 @@ footer {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .meal-circle { width: 150px; height: 150px; }
+    .meal-circle { width: 120px; height: 120px; }
     .meal-circles { gap: 1rem; }
     .meal-circle.expanded {
-        width: 320px !important;
-        height: 320px !important;
-        transform: translate(-50%,-50%) scale(1.6) !important;
+        width: 280px !important;
+        height: 280px !important;
+        transform: translate(-50%,-50%) scale(1.4) !important;
     }
     .meal-circle .detail-panel { max-height: 36%; }
 }
@@ -605,10 +641,10 @@ footer {
     }
     /* Make circles responsive while keeping circular aspect */
     .meal-circle {
-        width: 80vw;
-        height: 80vw;
-        max-width: 360px;
-        max-height: 360px;
+        width: 68vw;
+        height: 68vw;
+        max-width: 320px;
+        max-height: 320px;
         border-radius: 50%;
     }
     /* Use only the center page background as a unified background on small screens */
@@ -622,4 +658,142 @@ footer {
         background-size: cover !important;
         background-position: center center !important;
     }
+}
+
+/* Left collapsible history sidebar */
+.history-toggle {
+    position: fixed;
+    left: 25px;
+    top: 10px;
+    z-index: 120;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.36);
+}
+.history-toggle:focus { outline: 2px solid rgba(255,255,255,0.12); }
+
+.history-sidebar {
+    position: fixed;
+    left: 120px;
+    top: 95px;
+    width: 300px;
+    max-width: calc(100% - 40px);
+    height: calc(100vh - 160px);
+    z-index: 110;
+    overflow: auto;
+    border-radius: 12px;
+    transition: transform 240ms ease, opacity 200ms ease;
+    /* Transparent container per request: semi-transparent dark so text remains readable */
+    background: rgba(0,0,0,0.18);
+    color: #fff;
+    backdrop-filter: blur(6px) saturate(120%);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.36);
+}
+.history-sidebar.hidden {
+    transform: translateX(-110%);
+    opacity: 0; pointer-events: none;
+}
+.history-sidebar .history-inner { padding-bottom: 20px; }
+.history-sidebar .list-group-item { background: transparent; border: none; color: rgba(255,255,255,0.95); }
+.history-sidebar .list-group-item .small { color: rgba(255,255,255,0.78); }
+
+/* RTL: mirror the toggle and sidebar to the right */
+[dir="rtl"] .history-toggle {
+    left: auto;
+    right: 25px;
+}
+[dir="rtl"] .history-sidebar {
+    left: auto;
+    right: 120px;
+}
+[dir="rtl"] .history-sidebar.hidden {
+    /* slide out to the right when hidden in RTL */
+    transform: translateX(110%);
+}
+
+/* flip only the arrow glyph, not the whole button */
+.history-toggle .history-arrow { display:inline-block; transition: transform 160ms ease; }
+[dir="rtl"] .history-toggle .history-arrow { transform: rotate(180deg); }
+
+@media (max-width: 768px) {
+    .history-sidebar { width: 84vw; left: 120px; top: 86px; height: calc(100vh - 120px); }
+    /* On small screens move the toggle into the navbar area so it sits next to the brand */
+    .history-toggle {
+        top: 62px;
+        left: 20px;
+        /* keep it above nav elements */
+        z-index: 130;
+        /* make it read/feel like a small arrow button in the navbar */
+        font-size: 18px;
+        width: 36px;
+        height: 36px;
+        background: transparent;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        box-shadow: none;
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+    /* Mirror mobile toggle for RTL so it sits on the right next to the brand */
+    [dir="rtl"] .history-toggle { left: auto; right: 20px; }
+}
+
+    /* When visible on mobile, make the sidebar act like a full-screen drawer/modal */
+    .history-sidebar:not(.hidden) {
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+        background: rgba(0,0,0,0.82) !important;
+        padding-top: 56px !important;
+    }
+    .history-close {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        background: transparent;
+        color: #fff;
+        border: none;
+        font-size: 22px;
+        cursor: pointer;
+        z-index: 130;
+    }
+
+/* RTL: ensure the visible mobile drawer pins to the right and the close button moves left */
+[dir="rtl"] .history-sidebar:not(.hidden) {
+    left: auto !important;
+    right: 0 !important;
+}
+[dir="rtl"] .history-close {
+    right: auto;
+    left: 12px;
+}
+
+/* Fix: constrain expanded meal circle in RTL on small screens so it doesn't overflow viewport */
+@media (max-width: 768px) {
+    [dir="rtl"] .meal-circle.expanded {
+        /* center using left like LTR to avoid off-screen placement */
+        left: 50% !important;
+        right: auto !important;
+        transform: translate(-50%, -50%) scale(1.4) !important;
+        width: 280px !important;
+        height: 280px !important;
+    }
+}
+
+.green_withshadow
+{
+    color: #198754;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 7);
 }

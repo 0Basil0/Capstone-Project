@@ -153,6 +153,19 @@ msgstr "اسم العائلة"
 msgid "Age"
 msgstr "العمر"
 
+# User/signup form labels
+msgid "Username"
+msgstr "اسم المستخدم"
+
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+msgid "Password"
+msgstr "كلمة المرور"
+
+msgid "Password confirmation"
+msgstr "تأكيد كلمة المرور"
+
 msgid "Avatar"
 msgstr "الصورة"
 
@@ -203,3 +216,56 @@ msgstr "English"
 
 msgid "العربية"
 msgstr "العربية"
+
+# Password reset form and email
+#: main_app/templates/registration/password_reset_form.html:7
+msgid "Reset your password"
+msgstr "إعادة تعيين كلمة المرور"
+
+#: main_app/templates/registration/password_reset_form.html:8
+msgid "Enter the email address for your account and we'll send instructions to reset your password."
+msgstr "أدخل عنوان البريد الإلكتروني لحسابك وسنرسل تعليمات لإعادة تعيين كلمة المرور."
+
+#: main_app/templates/registration/password_reset_form.html:13
+msgid "Send reset email"
+msgstr "إرسال رابط إعادة التعيين"
+
+#: main_app/templates/registration/password_reset_subject.txt:1
+msgid "NutriGuard – Reset Your Password"
+msgstr "NutriGuard - إعادة تعيين كلمة المرور"
+
+#: main_app/templates/registration/password_reset_email.html:3
+msgid "Hello {{ user.get_username }},"
+msgstr "مرحبًا {{ user.get_username }},"
+
+#: main_app/templates/registration/password_reset_email.html:4
+msgid "We received a request to reset your password for your"
+msgstr "تلقينا طلبًا لإعادة تعيين كلمة المرور لحسابك في"
+
+#: main_app/templates/registration/password_reset_email.html:4
+msgid "NutriGuard"
+msgstr "NutriGuard"
+
+#: main_app/templates/registration/password_reset_email.html:4
+msgid "account."
+msgstr "."
+
+#: main_app/templates/registration/password_reset_email.html:5
+msgid "Click the button below to choose a new password:"
+msgstr "اضغط الزر أدناه لاختيار كلمة مرور جديدة:" 
+
+#: main_app/templates/registration/password_reset_email.html:11
+msgid "Reset My Password"
+msgstr "إعادة تعيين كلمة المرور"
+
+#: main_app/templates/registration/password_reset_email.html:13
+msgid "If you didn’t request this, please ignore this email."
+msgstr "إذا لم تطلب هذا، يرجى تجاهل هذا البريد الإلكتروني."
+
+#: main_app/templates/registration/password_reset_email.html:15
+msgid "Best regards,"
+msgstr "مع أطيب التحيات،"
+
+#: main_app/templates/registration/password_reset_email.html:16
+msgid "The NutriGuard Team"
+msgstr "فريق NutriGuard"

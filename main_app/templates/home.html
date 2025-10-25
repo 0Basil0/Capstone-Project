@@ -1,8 +1,21 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
 {% block title %}{% trans "Home" %}{% endblock %}
 
 {% block content %}
+<nav class=" navbar-expand-lg navbar-dark bg-success shadow-sm">
+    <div class="container">
+    <!-- History toggle moved into navbar for consistent placement -->
+     {% if LANGUAGE_CODE|slice:":2" == 'ar' %}
+        <button id="historyToggleBtn" class="history-toggle" aria-expanded="false" aria-controls="mealHistorySidebar" aria-label="Open history"><span class="history-arrow">‹</span></button>
+     {% endif %}
+     {% if LANGUAGE_CODE|slice:":2" == 'en' %}
+        <button id="historyToggleBtn" class="history-toggle" aria-expanded="false" aria-controls="mealHistorySidebar" aria-label="Open history"><span class="history-arrow">›</span></button>
+     {% endif %}
+
+</div>
+</nav>
 <!-- page-wide backgrounds for breakfast (left), lunch (center), dinner (right) -->
 <div class="page-bg">
     <div class="page-bg-item left" id="bg-breakfast"></div>
@@ -15,32 +28,69 @@
     <p class="text-light mb-0">{% trans "Click the button to generate AI-powered suggestions for today's meals (Breakfast, Lunch, Dinner). Resulting ingredients/description are saved to your account." %}</p>
     </div>
 </div>  
+<!-- Left collapsible history sidebar (in DOM early so screen-readers can find it) -->
+<aside id="mealHistorySidebar" class="history-sidebar" aria-hidden="false">
+    <button id="historyCloseBtn" class="history-close" aria-label="Close history">×</button>
+    <div class="history-inner p-3">
+        <h6 class="mb-2">{% trans "Recent generated meals" %}</h6>
+        {% if food_history %}
+            <div class="list-group">
+                {% for entry in food_history %}
+                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <div style="font-weight:700">{{ entry.day }}</div>
+                            <div class="small weight">
+                                {% if entry.breakfast %}
+                                    <span>{% trans "Breakfast" %}: {% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ entry.breakfast.name.ar }}{% else %}{{ entry.breakfast.name.en }}{% endif %}</span>
+                                {% endif %}
+                                {% if entry.lunch %}
+                                    &nbsp;•&nbsp;<span>{% trans "Lunch" %}: {% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ entry.lunch.name.ar }}{% else %}{{ entry.lunch.name.en }}{% endif %}</span>
+                                {% endif %}
+                                {% if entry.dinner %}
+                                    &nbsp;•&nbsp;<span>{% trans "Dinner" %}: {% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ entry.dinner.name.ar }}{% else %}{{ entry.dinner.name.en }}{% endif %}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            {% if entry.breakfast.image or entry.lunch.image or entry.dinner.image %}
+                                <img src="{{ entry.breakfast.image|default:entry.lunch.image|default:entry.dinner.image }}" alt="" style="width:64px; height:44px; object-fit:cover; border-radius:6px;"/>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-muted small">{% trans "No recent generated meals yet." %}</div>
+        {% endif %}
+    </div>
+</aside>
+
 <div class="d-flex justify-content-center gap-4 mb-4 meal-circles">
     <div class="meal-circle" id="breakfast">
     <div class="meal-label">{% trans "Breakfast" %}</div>
         <button class="close-expanded" aria-label="Close">×</button>
-        <div class="meal-name" id="breakfast-name">{% if initial_plan %}{{ initial_plan.breakfast.name }}{% else %}—{% endif %}</div>
         <div class="meal-details" aria-hidden="true">
-            <p class="small text-muted meal-ings" id="breakfast-ings"></p>
-            <p class="small meal-desc" id="breakfast-desc"></p>
+            <div class="meal-name" id="breakfast-name">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.breakfast.name.ar }}{% else %}{{ initial_plan.breakfast.name.en }}{% endif %}{% else %}—{% endif %}</div>
+            <p class="small weight meal-ings" id="breakfast-ings">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.breakfast.ingredients.ar }}{% else %}{{ initial_plan.breakfast.ingredients.en }}{% endif %}{% endif %}</p>
+            <p class="small meal-desc" id="breakfast-desc">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.breakfast.description.ar }}{% else %}{{ initial_plan.breakfast.description.en }}{% endif %}{% endif %}</p>
         </div>
     </div>
     <div class="meal-circle" id="lunch">
     <div class="meal-label">{% trans "Lunch" %}</div>
         <button class="close-expanded" aria-label="Close">×</button>
-        <div class="meal-name" id="lunch-name">{% if initial_plan %}{{ initial_plan.lunch.name }}{% else %}—{% endif %}</div>
         <div class="meal-details" aria-hidden="true">
-            <p class="small text-muted meal-ings" id="lunch-ings"></p>
-            <p class="small meal-desc" id="lunch-desc"></p>
+            <div class="meal-name" id="lunch-name">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.lunch.name.ar }}{% else %}{{ initial_plan.lunch.name.en }}{% endif %}{% else %}—{% endif %}</div>
+            <p class="small weight meal-ings" id="lunch-ings">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.lunch.ingredients.ar }}{% else %}{{ initial_plan.lunch.ingredients.en }}{% endif %}{% endif %}</p>
+            <p class="small meal-desc" id="lunch-desc">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.lunch.description.ar }}{% else %}{{ initial_plan.lunch.description.en }}{% endif %}{% endif %}</p>
         </div>
     </div>
     <div class="meal-circle" id="dinner">
     <div class="meal-label">{% trans "Dinner" %}</div>
         <button class="close-expanded" aria-label="Close">×</button>
-        <div class="meal-name" id="dinner-name">{% if initial_plan %}{{ initial_plan.dinner.name }}{% else %}—{% endif %}</div>
         <div class="meal-details" aria-hidden="true">
-            <p class="small text-muted meal-ings" id="dinner-ings"></p>
-            <p class="small meal-desc" id="dinner-desc"></p>
+            <div class="meal-name" id="dinner-name">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.dinner.name.ar }}{% else %}{{ initial_plan.dinner.name.en }}{% endif %}{% else %}—{% endif %}</div>
+            <p class="small weight meal-ings" id="dinner-ings">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.dinner.ingredients.ar }}{% else %}{{ initial_plan.dinner.ingredients.en }}{% endif %}{% endif %}</p>
+            <p class="small meal-desc" id="dinner-desc">{% if initial_plan %}{% if LANGUAGE_CODE|slice:":2" == 'ar' %}{{ initial_plan.dinner.description.ar }}{% else %}{{ initial_plan.dinner.description.en }}{% endif %}{% endif %}</p>
         </div>
     </div>
 </div>
@@ -77,6 +127,17 @@
     
 // Initialize UI from server-provided plan (if present)
 const initialPlan = {{ initial_plan_json|default:'null'|safe }};
+// current language code (from server)
+const CURRENT_LANG = '{{ LANGUAGE_CODE }}' || 'en';
+
+// helper to pick the right language value from either a string or {en,ar} object
+function pickLangValue(v) {
+    if (!v) return '';
+    if (typeof v === 'string') return v;
+    const code = (CURRENT_LANG || 'en').substring(0,2);
+    return (v[code] || v['en'] || Object.values(v)[0] || '')
+}
+
 // preserve original state for each circle so we can restore when closing
 const originalState = {};
 ['breakfast','lunch','dinner'].forEach(id => {
@@ -125,18 +186,21 @@ if (initialPlan) {
     // set dataset fields so modal works on initial load
     if (initialPlan.breakfast) {
         const el = document.getElementById('breakfast');
-        el.dataset.ingredients = initialPlan.breakfast.ingredients || '';
-        el.dataset.description = initialPlan.breakfast.description || '';
+        el.dataset.ingredients = pickLangValue(initialPlan.breakfast.ingredients) || '';
+        el.dataset.description = pickLangValue(initialPlan.breakfast.description) || '';
+        document.getElementById('breakfast-name').innerText = pickLangValue(initialPlan.breakfast.name) || '—';
     }
     if (initialPlan.lunch) {
         const el = document.getElementById('lunch');
-        el.dataset.ingredients = initialPlan.lunch.ingredients || '';
-        el.dataset.description = initialPlan.lunch.description || '';
+        el.dataset.ingredients = pickLangValue(initialPlan.lunch.ingredients) || '';
+        el.dataset.description = pickLangValue(initialPlan.lunch.description) || '';
+        document.getElementById('lunch-name').innerText = pickLangValue(initialPlan.lunch.name) || '—';
     }
     if (initialPlan.dinner) {
         const el = document.getElementById('dinner');
-        el.dataset.ingredients = initialPlan.dinner.ingredients || '';
-        el.dataset.description = initialPlan.dinner.description || '';
+        el.dataset.ingredients = pickLangValue(initialPlan.dinner.ingredients) || '';
+        el.dataset.description = pickLangValue(initialPlan.dinner.description) || '';
+        document.getElementById('dinner-name').innerText = pickLangValue(initialPlan.dinner.name) || '—';
     }
 }
 
@@ -153,9 +217,9 @@ async function generatePlan() {
         const res = await fetch('{% url 'generate_meals' %}', {method: 'POST', headers: {'X-CSRFToken': csrftoken}});
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
-        document.getElementById('breakfast-name').innerText = data.breakfast.name || '—';
-        document.getElementById('lunch-name').innerText = data.lunch.name || '—';
-        document.getElementById('dinner-name').innerText = data.dinner.name || '—';
+    document.getElementById('breakfast-name').innerText = pickLangValue(data.breakfast.name) || '—';
+    document.getElementById('lunch-name').innerText = pickLangValue(data.lunch.name) || '—';
+    document.getElementById('dinner-name').innerText = pickLangValue(data.dinner.name) || '—';
 
         // Apply background images with soft overlay to circles
         function setCircleImage(id, imageUrl) {
@@ -188,12 +252,12 @@ async function generatePlan() {
         });
 
     // store meal details as data attributes for modal
-    document.getElementById('breakfast').dataset.ingredients = data.breakfast.ingredients || '';
-    document.getElementById('breakfast').dataset.description = data.breakfast.description || '';
-    document.getElementById('lunch').dataset.ingredients = data.lunch.ingredients || '';
-    document.getElementById('lunch').dataset.description = data.lunch.description || '';
-    document.getElementById('dinner').dataset.ingredients = data.dinner.ingredients || '';
-    document.getElementById('dinner').dataset.description = data.dinner.description || '';
+    document.getElementById('breakfast').dataset.ingredients = pickLangValue(data.breakfast.ingredients) || '';
+    document.getElementById('breakfast').dataset.description = pickLangValue(data.breakfast.description) || '';
+    document.getElementById('lunch').dataset.ingredients = pickLangValue(data.lunch.ingredients) || '';
+    document.getElementById('lunch').dataset.description = pickLangValue(data.lunch.description) || '';
+    document.getElementById('dinner').dataset.ingredients = pickLangValue(data.dinner.ingredients) || '';
+    document.getElementById('dinner').dataset.description = pickLangValue(data.dinner.description) || '';
 
         // set page-wide backgrounds
         function setPageBg(id, url) {
@@ -228,6 +292,75 @@ async function generatePlan() {
 }
 
 document.getElementById('generateBtn').addEventListener('click', generatePlan);
+
+// Sidebar toggle: persist collapse state in localStorage + mobile handling
+(function () {
+    const btn = document.getElementById('historyToggleBtn');
+    const sidebar = document.getElementById('mealHistorySidebar');
+    const closeBtn = document.getElementById('historyCloseBtn');
+    if (!btn || !sidebar) return;
+
+    function disableBodyScroll(disable) {
+        if (disable) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    }
+
+    function setHidden(hidden) {
+        if (hidden) {
+            sidebar.classList.add('hidden');
+            sidebar.setAttribute('aria-hidden', 'true');
+            btn.setAttribute('aria-expanded', 'false');
+            // restore scrolling
+            disableBodyScroll(false);
+        } else {
+            sidebar.classList.remove('hidden');
+            sidebar.setAttribute('aria-hidden', 'false');
+            btn.setAttribute('aria-expanded', 'true');
+            // on small screens disable page scroll so the drawer feels modal
+            if (window.innerWidth <= 768) disableBodyScroll(true);
+        }
+        try { localStorage.setItem('mealHistoryHidden', hidden ? '1' : '0'); } catch (e) {}
+    }
+
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isHidden = sidebar.classList.contains('hidden');
+        setHidden(!isHidden);
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            setHidden(true);
+        });
+    }
+
+    // initialize from localStorage (default: visible)
+    try {
+        const v = localStorage.getItem('mealHistoryHidden');
+        if (v === '1') setHidden(true);
+    } catch (e) {}
+
+    // on resize, ensure we re-evaluate scroll locking
+    window.addEventListener('resize', () => {
+        if (sidebar.classList.contains('hidden')) {
+            disableBodyScroll(false);
+        } else {
+            if (window.innerWidth <= 768) disableBodyScroll(true); else disableBodyScroll(false);
+        }
+    });
+
+    // default: hide on small screens (but keep user's persisted choice)
+    try {
+        const persisted = localStorage.getItem('mealHistoryHidden');
+        if (persisted === null && window.innerWidth <= 768) {
+            setHidden(true);
+        }
+    } catch (e) {}
+})();
 
 // Attach click handlers to circles to expand them and show inline details
 function collapseAll() {

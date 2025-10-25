@@ -7,7 +7,7 @@
         
                 <div class="page-card fade-in-up card chat-card">
                     <div class="card-body">
-                        <h2 class="mb-4 ">{% trans "My Allergies" %}</h2>
+                        <h2 class="mb-4 green_withshadow" style="display: flex; justify-content: center;" >{% trans "My Allergies" %}</h2>
     {% if allergy %}
         <h5>Edit allergy</h5>
         <form method="post" class="mb-3" action="{% url 'edit_allergy' allergy.pk %}">
@@ -28,7 +28,7 @@
         <form method="post" class="mb-3" action="{% url 'add_allergy' %}">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="allergies" class="form-label">{% trans "List your allergies (comma-separated):" %}</label>
+                <label for="allergies" class="form-label " style="color:black; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); font-size: 1.5rem; display: flex; justify-content: center;">{% trans "List your allergies (comma-separated):" %}</label>
                 <input type="text" class="form-control" id="allergies" name="allergies" placeholder="e.g. peanuts, shellfish, gluten">
             </div>
             <button type="submit" class="btn btn-primary">Save Allergies</button>
@@ -149,20 +149,20 @@
                     });
                 });
             </script>
-    <h4 class="mt-4">{% trans "Your saved allergies" %}</h4>
-        <div class="allergy-circles mt-3">
+    <h4 class="mt-4" style="color: #198754; text-shadow: 0 2px 4px rgba(0, 0, 0, 3); display: flex; justify-content: center;">{% trans "Your saved allergies" %}</h4>
+        <div class="allergy-circles mt-3" style="justify-content: center; size: large;">
             {% for a in allergies %}
-                <div class="allergy-circle" data-allergy-id="{{ a.id }}" data-description="{{ a.description|escapejs }}">
-                    <div class="label">{{ a.name }}</div>
-                    <div class="sub">{% trans "Tap to view" %}</div>
+                <div class="allergy-circle"  data-allergy-id="{{ a.id }}" data-description="{{ a.description|escapejs }}">
+                    <div class="label green_withshadow">{{ a.name }}</div>
+                    <div class="sub green_withshadow" >{% trans "Tap to view" %}</div>
                 </div>
             {% endfor %}
-            <div class="allergy-main-circle" id="addAllergyBtn">+</div>
+            <div class="allergy-main-circle green_withshadow" id="addAllergyBtn">+</div>
         </div>
 
         <div id="allergyDetails" class="allergy-details-panel">
             <h5 id="allergyDetailsTitle"></h5>
-            <p id="allergyDetailsBody" class="small text-muted"></p>
+            <p id="allergyDetailsBody" class="small green_withshadow "></p>
         </div>
 
         {% if allergies|length == 0 %}
