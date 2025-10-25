@@ -42,11 +42,11 @@
                             {# Single-toggle language button: posts to set_language with the opposite language #} 
                             {% comment %} Use a simple GET toggle so the navbar item is a normal link (renders like others) %} {%  endcomment %}
 
-                                {% if CURRENT_LANGUAGE == 'ar' %}
-                                  <a class="nav-link" href="{% url 'toggle_language' %}?lang=en&next={{ request.path }}">{% trans "English" %}</a>
-                                {% else %}
-                                 <a class="nav-link" href="{% url 'toggle_language' %}?lang=ar&next={{ request.path }}">{% trans "العربية" %}</a>
-                                {% endif %}
+                                                                {% if CURRENT_LANGUAGE == 'ar' %}
+                                                                    <a class="nav-link" data-skip-nav="1" href="{% url 'toggle_language' %}?lang=en&next={{ request.path }}">{% trans "English" %}</a>
+                                                                {% else %}
+                                                                 <a class="nav-link" data-skip-nav="1" href="{% url 'toggle_language' %}?lang=ar&next={{ request.path }}">{% trans "العربية" %}</a>
+                                                                {% endif %}
                             
                         </li>
                         {% if user.is_authenticated %}
@@ -151,9 +151,10 @@
                         // exclude profile edit specifically
                         try{
                             var p = new URL(h, window.location.origin).pathname;
-                            if(/\/profile\/edit\/?$/.test(p)) return;
+                            
+                            if(/\/profile\/edit\/?$/.test(p) ) return;
                         } catch(e) {
-                            if(/\/profile\/edit\/?$/.test(h)) return;
+                            if(/\/profile\/edit\/?$/.test(h) ) return;
                         }
                         if(h && hrefs.indexOf(h)===-1) hrefs.push(h);
                     });

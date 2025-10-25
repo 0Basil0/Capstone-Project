@@ -8,6 +8,10 @@ class Food(models.Model):
     name = models.CharField(max_length=100)
     ingredients = models.TextField()
     description = models.TextField(blank=True)
+    # Arabic translations for bilingual support
+    name_ar = models.CharField(max_length=100, blank=True, null=True)
+    ingredients_ar = models.TextField(blank=True, null=True)
+    description_ar = models.TextField(blank=True, null=True)
     
     def __str__(self):
         return self.name

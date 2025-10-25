@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.utils.translation import gettext_lazy as _
 from .models import Allergy
 from .models import Profile
 
@@ -12,8 +13,8 @@ class ProfileAvatarForm(forms.ModelForm):
 
 
 class ProfileForm(forms.ModelForm):
-    first_name = forms.CharField(required=False, max_length=30)
-    last_name = forms.CharField(required=False, max_length=150)
+    first_name = forms.CharField(required=False, max_length=30, label=_('First name'))
+    last_name = forms.CharField(required=False, max_length=150, label=_('Last name'))
 
     class Meta:
         model = Profile
@@ -42,16 +43,19 @@ class ProfileForm(forms.ModelForm):
 
 
 class CustomUserCreationForm(UserCreationForm):
-    first_name = forms.CharField(required=False, max_length=30)
-    last_name = forms.CharField(required=False, max_length=150)
-    email = forms.EmailField(required=True)
-    age = forms.IntegerField(required=False, min_value=0, max_value=150)
+    first_name = forms.CharField(required=False, max_length=30, label=_('First name'))
+    last_name = forms.CharField(required=False, max_length=150, label=_('Last name'))
+    username = forms.CharField(label=_('Username'))
+    email = forms.EmailField(required=True, label=_('Email'))
+    age = forms.IntegerField(required=False, min_value=0, max_value=150, label=_('Age'))
+    password1 = forms.CharField(label=_('Password'), widget=forms.PasswordInput)
+    password2 = forms.CharField(label=_('Password confirmation'), widget=forms.PasswordInput)
 
 
     class Meta:
         model = User
-       
-        fields = ['first_name', 'last_name', 'username', 'email', 'password1', 'password2']
+        
+        fields = ['first_name', 'last_name', 'username', 'email', 'age', 'password1', 'password2']
 
     def save(self, commit=True):
         user = super().save(commit=False)

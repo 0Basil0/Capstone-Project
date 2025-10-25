@@ -55,13 +55,16 @@ def generate_daily_meals(allergy_names=None, meals_today=None):
         client = genai.Client()
         avoid = ', '.join(allergy_names) if allergy_names else 'none'
         prompt = (
-            f"Generate a JSON object with three fields: breakfast, lunch, dinner. "
-            f"Each field should contain an object with name, ingredients (comma-separated), and a one-sentence description. "
-            f"Avoid any ingredients that commonly contain these allergens: {avoid}. "
-            f"Return ONLY valid JSON. Keep names short and ingredients concise."
-            f" Do not include any additional text outside the JSON object."
-            f" dont repeat meal names"
-            f" dont give me meals that i have already had today {meals_today}"
+            f"Generate a STRICT JSON object with three fields: breakfast, lunch, dinner.\n"
+            f"Each field must be an object with the keys: name, ingredients, description.\n"
+            f"For each of those keys, return a single STRING that contains the English text, then a space, then two slashes `//`, then a space, then the Arabic translation.\n"
+            f"Example: \"name\": \"Pancakes // فطائر\" , \"ingredients\": \"flour, milk // دقيق, حليب\"\n"
+            f"Ingredients should be a comma-separated list. Descriptions should be one short sentence.\n"
+            f"Avoid any ingredients that commonly contain these allergens: {avoid}.\n"
+            f"Do not repeat meal names across breakfast, lunch, and dinner.\n"
+            f"Do not include any additional text outside the JSON object — RETURN ONLY VALID JSON.\n"
+            f"If the user already had meals today: {meals_today}, do not include those meals.\n"
+            f"Use the `//` delimiter exactly (space on both sides) to separate English and Arabic in each field.\n"
         )
 
         response = client.models.generate_content(

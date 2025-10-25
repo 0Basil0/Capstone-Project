@@ -483,6 +483,21 @@ footer {
     text-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
 
+/* Hide the details (name/ingredients/description) inside the circle by default
+   so only the meal label is visible. When expanded, show the details. */
+.meal-circle .meal-details {
+    display: none;
+    opacity: 0;
+    transition: opacity 180ms ease, transform 180ms ease;
+    transform: translateY(6px);
+    width: 86%;
+}
+.meal-circle.expanded .meal-details {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* Expanded circle animation */
 .meal-circle.expanded {
     position: fixed !important;
@@ -623,3 +638,82 @@ footer {
         background-position: center center !important;
     }
 }
+
+/* Left collapsible history sidebar */
+.history-toggle {
+    position: fixed;
+    left: 25px;
+    top: 10px;
+    z-index: 120;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.36);
+}
+.history-toggle:focus { outline: 2px solid rgba(255,255,255,0.12); }
+
+.history-sidebar {
+    position: fixed;
+    left: 120px;
+    top: 95px;
+    width: 300px;
+    max-width: calc(100% - 40px);
+    height: calc(100vh - 160px);
+    z-index: 110;
+    overflow: auto;
+    border-radius: 12px;
+    transition: transform 240ms ease, opacity 200ms ease;
+    /* Transparent container per request: semi-transparent dark so text remains readable */
+    background: rgba(0,0,0,0.18);
+    color: #fff;
+    backdrop-filter: blur(6px) saturate(120%);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.36);
+}
+.history-sidebar.hidden {
+    transform: translateX(-110%);
+    opacity: 0; pointer-events: none;
+}
+.history-sidebar .history-inner { padding-bottom: 20px; }
+.history-sidebar .list-group-item { background: transparent; border: none; color: rgba(255,255,255,0.95); }
+.history-sidebar .list-group-item .small { color: rgba(255,255,255,0.78); }
+
+@media (max-width: 768px) {
+    .history-sidebar { width: 84vw; left: 120px; top: 86px; height: calc(100vh - 120px); }
+    /* On small screens move the toggle into the navbar area so it sits next to the brand */
+    .history-toggle {
+        top: 15px;
+        left: 280px;
+        /* keep it above nav elements */
+        z-index: 130;
+    }
+}
+
+    /* When visible on mobile, make the sidebar act like a full-screen drawer/modal */
+    .history-sidebar:not(.hidden) {
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+        background: rgba(0,0,0,0.82) !important;
+        padding-top: 56px !important;
+    }
+    .history-close {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        background: transparent;
+        color: #fff;
+        border: none;
+        font-size: 22px;
+        cursor: pointer;
+        z-index: 130;
+    }
+
